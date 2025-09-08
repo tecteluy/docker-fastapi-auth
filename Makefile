@@ -70,13 +70,13 @@ backup-hash: ## Generate SHA256 hash for a password
 	@./scripts/manage-backup-users.sh hash "$(PASSWORD)"
 
 backup-create: ## Create a new backup user
-	@echo "Usage: make backup-create USERNAME=username PASSWORD=password [ADMIN=true] [PERMISSIONS='{"services":["*"]}']"
+	@echo "Usage: make backup-create USERNAME=username PASSWORD=password [ADMIN=true] [PERMISSIONS='{'\"services\":[\"*\"]}'] [EMAIL=email] [FULL_NAME='Full Name']"
 	@if [ -z "$(USERNAME)" ] || [ -z "$(PASSWORD)" ]; then \
 		echo "Error: USERNAME and PASSWORD are required"; \
 		echo "Example: make backup-create USERNAME=admin PASSWORD=mypass123 ADMIN=true"; \
 		exit 1; \
 	fi
-	@./scripts/manage-backup-users.sh create-user "$(USERNAME)" "$(PASSWORD)" "$(ADMIN)" "$(PERMISSIONS)"
+	@./scripts/manage-backup-users.sh create-user "$(USERNAME)" "$(PASSWORD)" "$(ADMIN)" "$(PERMISSIONS)" "$(EMAIL)" "$(FULL_NAME)"
 
 backup-list: ## List all configured backup users
 	@echo "Listing backup users..."

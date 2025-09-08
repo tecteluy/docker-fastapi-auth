@@ -32,10 +32,12 @@ create_backup_user() {
     local password="$2"
     local is_admin="${3:-false}"
     local permissions="${4:-[]}"
+    local email="${5:-}"
+    local full_name="${6:-}"
 
     if [ -z "$username" ] || [ -z "$password" ]; then
         echo -e "${RED}Error: Username and password are required${NC}"
-        echo "Usage: $0 create-user <username> <password> [is_admin] [permissions]"
+        echo "Usage: $0 create-user <username> <password> [is_admin] [permissions] [email] [full_name]"
         exit 1
     fi
 
@@ -46,6 +48,8 @@ create_backup_user() {
     echo "Password Hash: $password_hash"
     echo "Is Admin: $is_admin"
     echo "Permissions: $permissions"
+    echo "Email: $email"
+    echo "Full Name: $full_name"
     echo
 
     # Generate JSON configuration
@@ -53,7 +57,9 @@ create_backup_user() {
   "$username": {
     "password_hash": "$password_hash",
     "is_admin": $is_admin,
-    "permissions": $permissions
+    "permissions": $permissions,
+    "email": "$email",
+    "full_name": "$full_name"
   }
 EOF
 )
@@ -68,7 +74,7 @@ show_usage() {
     echo
     echo "Usage:"
     echo "  $0 hash <password>              - Generate SHA256 hash for password"
-    echo "  $0 create-user <username> <password> [is_admin] [permissions]"
+    echo "  $0 create-user <username> <password> [is_admin] [permissions] [email] [full_name]"
     echo "                                   - Create backup user configuration"
     echo "  $0 list-users                   - List all configured backup users"
     echo "  $0 example-config               - Show example BACKUP_USERS configuration"
@@ -76,8 +82,8 @@ show_usage() {
     echo
     echo "Examples:"
     echo "  $0 hash mypassword123"
-    echo "  $0 create-user admin mypassword123 true '{\"services\": [\"*\"]}'"
-    echo "  $0 create-user operator oppass123 false '{\"services\": [\"read\", \"write\"]}'"
+    echo "  $0 create-user admin mypassword123 true '{\"services\": [\"*\"]}' 'admin@example.com' 'Admin User'"
+    echo "  $0 create-user operator oppass123 false '{\"services\": [\"read\", \"write\"]}' 'operator@example.com' 'Operator User'"
     echo "  $0 list-users"
     echo
 }
@@ -148,7 +154,7 @@ except Exception as e:
         echo -e "${YELLOW}No backup users configured${NC}"
         echo
         echo "To add backup users, use:"
-        echo "  $0 create-user <username> <password> [is_admin] [permissions]"
+        echo "  $0 create-user <username> <password> [is_admin] [permissions] [email] [full_name]"
         echo "  $0 example-config"
     fi
 }
@@ -189,7 +195,7 @@ case "${1:-help}" in
         echo "$password_hash"
         ;;
     "create-user")
-        create_backup_user "$2" "$3" "$4" "$5"
+        create_backup_user "$2" "$3" "$4" "$5" "$6"
         ;;
     "list-users")
         list_backup_users

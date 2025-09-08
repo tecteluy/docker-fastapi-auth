@@ -13,6 +13,8 @@ import re
 class BackupLoginRequest(BaseModel):
     username: str
     password: str
+    email: str | None = None
+    full_name: str | None = None
     
     @field_validator('username')
     @classmethod
@@ -191,10 +193,13 @@ async def backup_login(request: BackupLoginRequest, db: Session = Depends(get_db
     ).first()
 
     if not backup_user:
+        # Use provided email/full_name or default values
+        user_email = request.email or f"backup_{request.username}@atrium.local"
+        user_full_name = request.full_name or f"Backup User: {request.username}"
         backup_user = User(
-            email=f"backup_{request.username}@atrium.local",
+            email=user_email,
             username=f"backup_{request.username}",
-            full_name=f"Backup User: {request.username}",
+            full_name=user_full_name,
             provider="backup",
             provider_id=request.username,
             is_active=True,
