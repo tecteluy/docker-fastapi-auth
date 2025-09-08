@@ -1,6 +1,6 @@
-# Docker Atrium Auth Service
+# Atrium Authentication Service
 
-A production-ready, centralized OAuth 2.0 / OpenID Connect authentication service.
+A production-ready, centralized OAuth 2.0 / OpenID Connect authentication service for Atrium.
 
 [![Tests](https://img.shields.io/badge/tests-39%20passing-brightgreen)]()
 [![Security](https://img.shields.io/badge/security-audited-blue)]()
@@ -444,6 +444,134 @@ networks:
   atrium-network:
     external: true
     name: atrium-auth-network
+```
+
+## 🔧 Makefile Commands
+
+The project includes a comprehensive Makefile for easy development and management:
+
+### Quick Setup
+
+```bash
+# Quick setup for new developers (builds, starts services, initializes DB, runs tests)
+make setup
+
+# View all available commands
+make help
+```
+
+### Development
+
+```bash
+# Start/stop services
+make up          # Start all services
+make down        # Stop all services
+make restart     # Restart all services
+
+# View logs
+make logs        # All service logs
+make logs-auth   # Auth service logs only
+
+# Service management
+make build       # Build all Docker services
+make health      # Check service health
+make status      # Show service status
+```
+
+### Testing
+
+```bash
+# Run tests
+make test              # Run all tests
+make test-unit         # Run unit tests only
+make test-integration  # Run integration tests only
+make test-coverage     # Run tests with coverage report
+```
+
+### Database Management
+
+```bash
+# Database operations
+make db-init   # Initialize database
+make db-reset  # Reset database (WARNING: deletes all data)
+```
+
+### Development Tools
+
+```bash
+# Shell access
+make shell     # Open shell in auth service container
+make shell-db  # Open PostgreSQL shell
+
+# Code quality
+make format    # Format Python code with black
+make lint      # Lint Python code with flake8
+```
+
+## 🔐 Backup User Management
+
+The service supports multiple backup users for emergency access when OAuth is unavailable:
+
+### Create Backup Users
+
+```bash
+# Create admin user with full access
+make backup-create USERNAME=admin PASSWORD=secure123 ADMIN=true
+
+# Create operator user with limited permissions
+make backup-create USERNAME=operator PASSWORD=op123 ADMIN=false PERMISSIONS='{"services":["read","write"]}'
+
+# Create viewer user with read-only access
+make backup-create USERNAME=viewer PASSWORD=view123 ADMIN=false PERMISSIONS='{"services":["read"]}'
+```
+
+### Manage Backup Users
+
+```bash
+# List all configured backup users
+make backup-list
+
+# Generate password hash for manual configuration
+make backup-hash PASSWORD=your_password
+
+# Show example configuration
+make backup-example
+```
+
+### Manual Configuration
+
+For advanced configuration, edit your `.env` file:
+
+```bash
+# Multiple backup users (recommended)
+BACKUP_USERS={
+  "admin": {
+    "password_hash": "your_sha256_hash",
+    "is_admin": true,
+    "permissions": {"services": ["*"]}
+  },
+  "operator": {
+    "password_hash": "your_sha256_hash",
+    "is_admin": false,
+    "permissions": {"services": ["read", "write"]}
+  }
+}
+
+# Legacy single user (backward compatibility)
+BACKUP_ADMIN_USERNAME=emergency_admin
+BACKUP_ADMIN_PASSWORD_HASH=your_sha256_hash
+```
+
+### Backup Login API
+
+```bash
+# Login with backup credentials
+curl -X POST http://localhost:8008/auth/backup-login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "admin",
+    "password": "secure123"
+  }'
 ```
 
 ## 🧪 Testing

@@ -124,25 +124,58 @@ async def backup_login(request: BackupLoginRequest, db: Session = Depends(get_db
     """Backup login method using username/password."""
     import os
     import hashlib
+    import json
     
     # Get backup credentials from environment variables for security
-    backup_username = os.getenv("BACKUP_ADMIN_USERNAME", "")
-    backup_password_hash = os.getenv("BACKUP_ADMIN_PASSWORD_HASH", "")
+    backup_users_json = os.getenv("BACKUP_USERS", "")
+    
+    # Fallback to single user format for backward compatibility
+    if not backup_users_json:
+        backup_username = os.getenv("BACKUP_ADMIN_USERNAME", "")
+        backup_password_hash = os.getenv("BACKUP_ADMIN_PASSWORD_HASH", "")
+        
+        if backup_username and backup_password_hash:
+            backup_users = {
+                backup_username: {
+                    "password_hash": backup_password_hash,
+                    "is_admin": True,
+                    "permissions": {"services": ["*"]}
+                }
+            }
+        else:
+            backup_users = {}
+    else:
+        try:
+            backup_users = json.loads(backup_users_json)
+        except json.JSONDecodeError:
+            raise HTTPException(
+                status_code=500,
+                detail="Invalid BACKUP_USERS configuration"
+            )
     
     # If no backup credentials are configured, disable this endpoint
-    if not backup_username or not backup_password_hash:
+    if not backup_users:
         raise HTTPException(
             status_code=503, 
             detail="Backup login not configured. Please contact administrator."
         )
+    
+    # Check if username exists in backup users
+    if request.username not in backup_users:
+        # Log failed attempt for security monitoring
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning(f"Failed backup login attempt for unknown username: {request.username}")
+        raise HTTPException(status_code=401, detail="Invalid backup credentials")
+    
+    user_config = backup_users[request.username]
     
     # Hash the provided password to compare with stored hash
     provided_password_hash = hashlib.sha256(request.password.encode()).hexdigest()
     
     # Secure comparison to prevent timing attacks
     import hmac
-    if not (request.username == backup_username and 
-            hmac.compare_digest(provided_password_hash, backup_password_hash)):
+    if not hmac.compare_digest(provided_password_hash, user_config["password_hash"]):
         # Log failed attempt for security monitoring
         import logging
         logger = logging.getLogger(__name__)
@@ -152,18 +185,21 @@ async def backup_login(request: BackupLoginRequest, db: Session = Depends(get_db
     
     # Create or get backup user
     from ..models.user import User
-    backup_user = db.query(User).filter(User.username == "backup_admin").first()
+    backup_user = db.query(User).filter(
+        User.username == f"backup_{request.username}",
+        User.provider == "backup"
+    ).first()
 
     if not backup_user:
         backup_user = User(
-            email="backup@atrium.local",
-            username="backup_admin",
-            full_name="Backup Administrator",
+            email=f"backup_{request.username}@atrium.local",
+            username=f"backup_{request.username}",
+            full_name=f"Backup User: {request.username}",
             provider="backup",
-            provider_id="backup_admin",
+            provider_id=request.username,
             is_active=True,
-            is_admin=True,
-            permissions={"services": ["*"]},
+            is_admin=user_config.get("is_admin", False),
+            permissions=user_config.get("permissions", {"services": []}),
             last_login=None
         )
         db.add(backup_user)

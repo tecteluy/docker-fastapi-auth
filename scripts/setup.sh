@@ -32,15 +32,9 @@ fi
 
 echo "✅ Docker prerequisites met"
 
-# Check if lens project exists for migration
-LENS_PATH="../docker-atrium-lens"
-if [ -d "$LENS_PATH" ]; then
-    echo "✅ Found docker-atrium-lens project for migration"
-    MIGRATE_FROM_LENS=true
-else
-    echo "⚠️  docker-atrium-lens not found. Will setup from scratch."
-    MIGRATE_FROM_LENS=false
-fi
+# Remove Lens migration logic; always setup from scratch
+echo "⚠️  Skipping lens migration logic; setting up project from scratch."
+MIGRATE_FROM_LENS=false
 
 echo ""
 echo "🔧 Setting up project structure..."
