@@ -1,6 +1,9 @@
 import httpx
 from typing import Optional, Dict, Any
+import logging
 from ..config import settings
+
+logger = logging.getLogger(__name__)
 
 class OAuthService:
     def __init__(self):
@@ -86,7 +89,7 @@ class OAuthService:
                     "provider_data": user_data
                 }
         except Exception as e:
-            print(f"GitHub OAuth error: {e}")
+            logger.error(f"GitHub OAuth error: {e}")
             return None
 
     async def exchange_google_code(self, code: str) -> Optional[Dict[str, Any]]:
@@ -130,5 +133,5 @@ class OAuthService:
                     "provider_data": user_data
                 }
         except Exception as e:
-            print(f"Google OAuth error: {e}")
+            logger.error(f"Google OAuth error: {e}")
             return None

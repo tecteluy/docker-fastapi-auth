@@ -1,4 +1,5 @@
 from pydantic_settings import BaseSettings
+from pydantic import ConfigDict
 from typing import Optional
 
 class Settings(BaseSettings):
@@ -20,15 +21,27 @@ class Settings(BaseSettings):
     postgres_db: str = "atrium_auth"
     postgres_host: str = "auth-db"
     postgres_port: int = 5432
+    postgres_host_auth_method: str = "scram-sha-256"
 
     # Redis
     redis_url: str = "redis://auth-redis:6379/0"
+    redis_password: Optional[str] = None
+    redis_port: int = 6379
 
     # Application URLs
     frontend_url: str = "http://localhost:3000"
-    backend_url: str = "http://localhost:8001"
+    backend_url: str = "http://localhost:8006"
 
-    class Config:
-        env_file = ".env"
+    # Service Configuration
+    auth_service_port: int = 8008
+    auth_service_dev_port: int = 8007
+
+    # API Configuration
+    api_token: str = "changeme"
+
+    # Environment
+    environment: str = "production"
+
+    model_config = ConfigDict(env_file=".env")
 
 settings = Settings()

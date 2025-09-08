@@ -1,0 +1,15 @@
+# Funding configuration copied from atrium-tectel
+# Avoid putting sensitive financial info directly in the repository.
+
+github: []
+patreon: ''
+open_collective: ''
+ko_fi: ''
+tidelift: ''
+community_bridge: ''
+liberapay: ''
+issuehunt: ''
+otechie: ''
+lfx_crowdfunding: ''
+custom:
+  - https://coff.ee/tecteluy
