@@ -1,6 +1,6 @@
 # Docker Atrium Auth Service
 
-A production-ready, centralized OAuth 2.0 / OpenID Connect authentication service for the Atrium infrastructure ecosystem.
+A production-ready, centralized OAuth 2.0 / OpenID Connect authentication service.
 
 [![Tests](https://img.shields.io/badge/tests-39%20passing-brightgreen)]()
 [![Security](https://img.shields.io/badge/security-audited-blue)]()
@@ -8,7 +8,7 @@ A production-ready, centralized OAuth 2.0 / OpenID Connect authentication servic
 
 ## 🚀 Overview
 
-This service provides enterprise-grade authentication and authorization for all Atrium services, featuring OAuth integration, JWT token management, and comprehensive user permissions.
+This service provides enterprise-grade authentication and authorization, featuring OAuth integration, JWT token management, and comprehensive user permissions.
 
 ### Key Features
 
@@ -47,8 +47,8 @@ This service provides enterprise-grade authentication and authorization for all 
 ```mermaid
 graph TB
     subgraph "Client Applications"
-        A[Atrium Lens UI]
-        B[Atrium Nexus API]
+        A[Web UI]
+        B[Integrated API]
         C[Other Services]
     end
     
@@ -329,7 +329,7 @@ Service information.
 **Response:**
 ```json
 {
-  "message": "Atrium Lens Authentication Service"
+  "message": "Atrium Authentication Service"
 }
 ```
 
@@ -751,14 +751,14 @@ redis-cli CONFIG SET maxmemory-policy allkeys-lru
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](LICENSE) file for details.
 
 ## 📞 Support
 
 - **Issues**: [GitHub Issues](https://github.com/tecteluy/docker-atrium-auth/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/tecteluy/docker-atrium-auth/discussions)
 - **Documentation**: This README and inline code documentation
-- **Security Issues**: Report privately to security@tecteluy.com
+- **Security Issues**: Report privately to security@tectel.com.uy
 
 ## 🔄 Changelog
 
@@ -781,4 +781,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**Made with ❤️ for the Atrium Infrastructure Ecosystem**
+**Made with ❤️ Have a lot of fun...**
