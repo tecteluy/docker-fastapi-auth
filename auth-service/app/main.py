@@ -30,8 +30,8 @@ async def lifespan(app: FastAPI):
     pass
 
 app = FastAPI(
-    title="Atrium Lens Authentication Service",
-    description="OAuth 2.0 / OpenID Connect authentication service for Atrium Lens",
+    title="Atrium Authentication Service",
+    description="OAuth 2.0 / OpenID Connect authentication service for Atrium",
     version="1.0.0",
     lifespan=lifespan
 )
@@ -50,7 +50,7 @@ app.include_router(auth_router)
 
 @app.get("/")
 async def root():
-    return {"message": "Atrium Lens Authentication Service"}
+    return {"message": "Atrium Authentication Service"}
 
 @app.get("/health")
 async def health_check():

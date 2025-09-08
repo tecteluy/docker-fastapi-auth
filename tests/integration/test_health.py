@@ -17,7 +17,7 @@ class TestHealthCheck:
         assert response.status_code == 200
         data = response.json()
         assert "message" in data
-        assert "Atrium Lens Authentication Service" in data["message"]
+        assert "Atrium Authentication Service" in data["message"]
 
     @pytest.mark.asyncio
     @patch('app.main.Base')
