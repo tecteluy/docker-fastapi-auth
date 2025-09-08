@@ -1,0 +1,173 @@
+services:
+  # === Authentication Services ===
+  
+  # PostgreSQL database for auth service
+  auth-db:
+    profiles: ["dev", "prod", "test"]
+    image: postgres:15
+    container_name: atrium-auth-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      POSTGRES_DB: ${POSTGRES_DB:-atrium_auth}
+      POSTGRES_HOST_AUTH_METHOD: ${POSTGRES_HOST_AUTH_METHOD:-scram-sha-256}
+    volumes:
+      - auth_postgres_data:/var/lib/postgresql/data
+    networks:
+      - auth-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-atrium_auth}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Redis for auth service sessions
+  auth-redis:
+    profiles: ["dev", "prod", "test"]
+    image: redis:7-alpine
+    container_name: atrium-auth-redis
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-}
+    volumes:
+      - auth_redis_data:/data
+    networks:
+      - auth-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Authentication service
+  auth-service:
+    profiles: ["dev", "prod"]
+    build: 
+      context: ./auth-service
+      dockerfile: Dockerfile
+    container_name: atrium-auth-service
+    environment:
+      # Database Configuration
+      - POSTGRES_HOST=auth-db
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-changeme}
+      - POSTGRES_DB=${POSTGRES_DB:-atrium_auth}
+      - POSTGRES_PORT=5432
+      
+      # Redis Configuration
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-}@auth-redis:6379/0
+      
+      # OAuth Configuration
+      - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID:-}
+      - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET:-}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
+      
+      # JWT Configuration
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-your-super-secret-jwt-key-change-this}
+      - JWT_ALGORITHM=${JWT_ALGORITHM:-HS256}
+      - JWT_ACCESS_TOKEN_EXPIRE_MINUTES=${JWT_ACCESS_TOKEN_EXPIRE_MINUTES:-30}
+      - JWT_REFRESH_TOKEN_EXPIRE_DAYS=${JWT_REFRESH_TOKEN_EXPIRE_DAYS:-7}
+      
+      # Application URLs
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
+      - BACKEND_URL=${BACKEND_URL:-http://localhost:8006}
+      
+      # API Configuration
+      - API_TOKEN=${API_TOKEN:-changeme}
+    depends_on:
+      auth-db:
+        condition: service_healthy
+      auth-redis:
+        condition: service_healthy
+    ports:
+      - "${AUTH_SERVICE_PORT:-8008}:8000"
+    networks:
+      - auth-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # Development service with volume mounts
+  auth-service-dev:
+    profiles: ["dev"]
+    build: 
+      context: ./auth-service
+      dockerfile: Dockerfile
+    container_name: atrium-auth-service-dev
+    environment:
+      # Same as auth-service
+      - POSTGRES_HOST=auth-db
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-changeme}
+      - POSTGRES_DB=${POSTGRES_DB:-atrium_auth}
+      - POSTGRES_PORT=5432
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-}@auth-redis:6379/0
+      - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID:-}
+      - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET:-}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-your-super-secret-jwt-key-change-this}
+      - JWT_ALGORITHM=${JWT_ALGORITHM:-HS256}
+      - JWT_ACCESS_TOKEN_EXPIRE_MINUTES=${JWT_ACCESS_TOKEN_EXPIRE_MINUTES:-30}
+      - JWT_REFRESH_TOKEN_EXPIRE_DAYS=${JWT_REFRESH_TOKEN_EXPIRE_DAYS:-7}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
+      - BACKEND_URL=${BACKEND_URL:-http://localhost:8006}
+      - API_TOKEN=${API_TOKEN:-changeme}
+    volumes:
+      - ./auth-service:/app
+    depends_on:
+      auth-db:
+        condition: service_healthy
+      auth-redis:
+        condition: service_healthy
+    ports:
+      - "${AUTH_SERVICE_DEV_PORT:-8007}:8000"
+    networks:
+      - auth-network
+    command: uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+  # Test runner
+  test-runner:
+    profiles: ["test"]
+    build:
+      context: ./auth-service
+      dockerfile: Dockerfile
+    container_name: atrium-auth-test-runner
+    environment:
+      - POSTGRES_HOST=auth-db
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-changeme}
+      - POSTGRES_DB=atrium_auth_test
+      - POSTGRES_PORT=5432
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-}@auth-redis:6379/1
+      - JWT_SECRET_KEY=test-secret-key-for-testing-only
+      - JWT_ALGORITHM=HS256
+      - JWT_ACCESS_TOKEN_EXPIRE_MINUTES=30
+      - JWT_REFRESH_TOKEN_EXPIRE_DAYS=7
+    volumes:
+      - ./auth-service:/app
+    depends_on:
+      auth-db:
+        condition: service_healthy
+      auth-redis:
+        condition: service_healthy
+    networks:
+      - auth-network
+    command: pytest tests/ -v --tb=short
+
+volumes:
+  auth_postgres_data:
+    name: atrium_auth_postgres_data
+  auth_redis_data:
+    name: atrium_auth_redis_data
+
+networks:
+  auth-network:
+    name: atrium-auth-network
+    driver: bridge
+    external: false
