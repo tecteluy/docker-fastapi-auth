@@ -1,15 +1,30 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
 from .database import engine, Base
 from .routes.auth import router as auth_router
 
-# Create database tables
-Base.metadata.create_all(bind=engine)
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Handle application startup and shutdown events."""
+    # Startup: Create database tables
+    try:
+        Base.metadata.create_all(bind=engine)
+        print("Database tables created successfully")
+    except Exception as e:
+        print(f"Warning: Could not create database tables: {e}")
+        # Don't fail the startup if database isn't ready yet
+
+    yield
+
+    # Shutdown: Clean up resources if needed
+    pass
 
 app = FastAPI(
     title="Atrium Lens Authentication Service",
     description="OAuth 2.0 / OpenID Connect authentication service for Atrium Lens",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan
 )
 
 # CORS middleware
