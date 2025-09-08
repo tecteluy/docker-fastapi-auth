@@ -158,8 +158,8 @@ async def backup_login(request: BackupLoginRequest, db: Session = Depends(get_db
     # If no backup credentials are configured, disable this endpoint
     if not backup_users:
         raise HTTPException(
-            status_code=503, 
-            detail="Backup login not configured. Please contact administrator."
+            status_code=503,
+            detail="Backup login not configured. Please contact an administrator."
         )
     
     # Check if username exists in backup users

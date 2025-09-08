@@ -34,7 +34,6 @@ class Settings(BaseSettings):
 
     # Service Configuration
     auth_service_port: int = 8008
-    auth_service_dev_port: int = 8007
 
     # API Configuration
     api_token: str = "changeme"

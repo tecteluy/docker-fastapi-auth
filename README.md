@@ -515,14 +515,22 @@ The service supports multiple backup users for emergency access when OAuth is un
 ### Create Backup Users
 
 ```bash
-# Create admin user with full access
-make backup-create USERNAME=admin PASSWORD=secure123 ADMIN=true
+# Create admin user with full access (with email/full_name)
+make backup-create \
+  USERNAME=admin PASSWORD=secure123 ADMIN=true \
+  EMAIL=admin@example.com FULL_NAME="Administrator"
 
 # Create operator user with limited permissions
-make backup-create USERNAME=operator PASSWORD=op123 ADMIN=false PERMISSIONS='{"services":["read","write"]}'
+make backup-create \
+  USERNAME=operator PASSWORD=op123 ADMIN=false \
+  PERMISSIONS='{"services":["read","write"]}' \
+  EMAIL=operator@example.com FULL_NAME="Operator User"
 
 # Create viewer user with read-only access
-make backup-create USERNAME=viewer PASSWORD=view123 ADMIN=false PERMISSIONS='{"services":["read"]}'
+make backup-create \
+  USERNAME=viewer PASSWORD=view123 ADMIN=false \
+  PERMISSIONS='{"services":["read"]}' \
+  EMAIL=viewer@example.com FULL_NAME="Viewer User"
 ```
 
 ### Manage Backup Users
@@ -548,30 +556,32 @@ BACKUP_USERS={
   "admin": {
     "password_hash": "your_sha256_hash",
     "is_admin": true,
-    "permissions": {"services": ["*"]}
+    "permissions": {"services": ["*"]},
+    "email": "admin@example.com",
+    "full_name": "Administrator"
   },
   "operator": {
     "password_hash": "your_sha256_hash",
     "is_admin": false,
-    "permissions": {"services": ["read", "write"]}
+    "permissions": {"services": ["read", "write"]},
+    "email": "operator@example.com",
+    "full_name": "Operator User"
   }
 }
-
-# Legacy single user (backward compatibility)
-BACKUP_ADMIN_USERNAME=emergency_admin
-BACKUP_ADMIN_PASSWORD_HASH=your_sha256_hash
 ```
 
 ### Backup Login API
 
 ```bash
-# Login with backup credentials
+# Login with backup credentials (including optional email/full_name is ignored by API)
 curl -X POST http://localhost:8008/auth/backup-login \
   -H "Content-Type: application/json" \
   -d '{
     "username": "admin",
-    "password": "secure123"
-  }'
+    "password": "secure123",
+    "email": "admin@example.com",
+    "full_name": "Administrator"
+}'
 ```
 
 ## 🧪 Testing
