@@ -1,7 +1,8 @@
-# Atrium Authentication Service
+# FastAPI Authentication Service
 
-A production-ready, centralized OAuth 2.0 / OpenID Connect authentication service for Atrium.
+A production-ready, centralized OAuth 2.0 / OpenID Connect authentication service for FastAPI.
 
+[![Version](https://img.shields.io/badge/version-1.1.0-blue)]()
 [![Tests](https://img.shields.io/badge/tests-39%20passing-brightgreen)]()
 [![Security](https://img.shields.io/badge/security-audited-blue)]()
 [![Docker](https://img.shields.io/badge/docker-ready-blue)]()
@@ -92,8 +93,8 @@ graph TB
 ### 1. Clone and Setup
 
 ```bash
-git clone https://github.com/tecteluy/docker-atrium-auth.git
-cd docker-atrium-auth
+git clone https://github.com/tecteluy/docker-fastapi-auth.git
+cd docker-fastapi-auth
 cp .env.example .env
 ```
 
@@ -142,9 +143,9 @@ open http://localhost:8008/docs
    - Go to [GitHub Developer Settings](https://github.com/settings/developers)
    - Click "New OAuth App"
    - Fill in details:
-     - **Application name**: `Atrium Authentication`
+     - **Application name**: `FastAPI Authentication`
      - **Homepage URL**: `http://localhost:3000` (dev) or your domain (prod)
-     - **Authorization callback URL**: `http://localhost:8008/auth/callback/github`
+     - **Authorization callback URL**: `http://localhost:8008/callback/github`
 
 2. **Configure Environment**:
 ```bash
@@ -162,7 +163,7 @@ GITHUB_CLIENT_SECRET=your_client_secret_here
 2. **Create OAuth Credentials**:
    - Go to "Credentials" → "Create Credentials" → "OAuth 2.0 Client ID"
    - Application type: "Web application"
-   - Authorized redirect URIs: `http://localhost:8008/auth/callback/google`
+   - Authorized redirect URIs: `http://localhost:8008/callback/google`
 
 3. **Configure Environment**:
 ```bash
@@ -220,7 +221,7 @@ BACKEND_URL=https://auth.your-domain.com
 
 ### Authentication Endpoints
 
-#### POST `/auth/login/{provider}`
+#### GET `/login/{provider}`
 Initiate OAuth login flow.
 
 **Parameters:**
@@ -234,7 +235,7 @@ Initiate OAuth login flow.
 }
 ```
 
-#### GET `/auth/callback/{provider}`
+#### GET `/callback/{provider}`
 Handle OAuth callback.
 
 **Parameters:**
@@ -261,7 +262,7 @@ Handle OAuth callback.
 }
 ```
 
-#### POST `/auth/refresh`
+#### POST `/refresh`
 Refresh access token.
 
 **Request:**
@@ -280,7 +281,7 @@ Refresh access token.
 }
 ```
 
-#### POST `/auth/logout`
+#### POST `/logout`
 Logout and revoke refresh token.
 
 **Request:**
@@ -290,7 +291,7 @@ Logout and revoke refresh token.
 }
 ```
 
-#### GET `/auth/me`
+#### GET `/me`
 Get current user information.
 
 **Headers:**
@@ -329,7 +330,7 @@ Service information.
 **Response:**
 ```json
 {
-  "message": "Atrium Authentication Service"
+  "message": "FastAPI Authentication Service"
 }
 ```
 
@@ -344,7 +345,7 @@ const AUTH_API_URL = process.env.NEXT_PUBLIC_AUTH_API_URL || 'http://localhost:8
 export const authService = {
   // Initiate login
   async login(provider) {
-    const response = await fetch(`${AUTH_API_URL}/auth/login/${provider}`);
+    const response = await fetch(`${AUTH_API_URL}/login/${provider}`);
     const { auth_url } = await response.json();
     window.location.href = auth_url;
   },
@@ -352,14 +353,14 @@ export const authService = {
   // Handle callback
   async handleCallback(provider, code, state) {
     const response = await fetch(
-      `${AUTH_API_URL}/auth/callback/${provider}?code=${code}&state=${state}`
+      `${AUTH_API_URL}/callback/${provider}?code=${code}&state=${state}`
     );
     return await response.json();
   },
 
   // Refresh token
   async refreshToken(refreshToken) {
-    const response = await fetch(`${AUTH_API_URL}/auth/refresh`, {
+    const response = await fetch(`${AUTH_API_URL}/refresh`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refresh_token: refreshToken })
@@ -369,7 +370,7 @@ export const authService = {
 
   // Get current user
   async getCurrentUser(accessToken) {
-    const response = await fetch(`${AUTH_API_URL}/auth/me`, {
+    const response = await fetch(`${AUTH_API_URL}/me`, {
       headers: { Authorization: `Bearer ${accessToken}` }
     });
     return await response.json();
@@ -399,7 +400,7 @@ class AuthService:
         async with httpx.AsyncClient() as client:
             try:
                 response = await client.get(
-                    f"{AUTH_SERVICE_URL}/auth/me",
+                    f"{AUTH_SERVICE_URL}/me",
                     headers={"Authorization": f"Bearer {token}"},
                     timeout=5.0
                 )
@@ -438,12 +439,12 @@ services:
     environment:
       - AUTH_SERVICE_URL=http://auth-service:8000
     networks:
-      - atrium-network
+      - fastapi-network
 
 networks:
-  atrium-network:
+  fastapi-network:
     external: true
-    name: atrium-auth-network
+    name: fastapi-auth-network
 ```
 
 ## 🔧 Makefile Commands
@@ -574,7 +575,7 @@ BACKUP_USERS={
 
 ```bash
 # Login with backup credentials (including optional email/full_name is ignored by API)
-curl -X POST http://localhost:8008/auth/backup-login \
+curl -X POST http://localhost:8008/backup-login \
   -H "Content-Type: application/json" \
   -d '{
     "username": "admin",
@@ -893,14 +894,23 @@ This project is licensed under the GNU General Public License v3.0 - see the [LI
 
 ## 📞 Support
 
-- **Issues**: [GitHub Issues](https://github.com/tecteluy/docker-atrium-auth/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/tecteluy/docker-atrium-auth/discussions)
+- **Issues**: [GitHub Issues](https://github.com/tecteluy/docker-fastapi-auth/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/tecteluy/docker-fastapi-auth/discussions)
 - **Documentation**: This README and inline code documentation
 - **Security Issues**: Report privately to security@tectel.com.uy
 
 ## 🔄 Changelog
 
-### Version 1.0.0 (Current)
+### Version 1.1.0 (Current)
+- ✅ Project rebranded to "FastAPI Authentication Service"
+- ✅ Updated container and network names
+- ✅ **Simplified API endpoints** - removed `/auth` prefix
+- ✅ Enhanced OAuth callback URL structure
+- ✅ Enhanced documentation and guides
+- ✅ Improved configuration scripts
+- ✅ All tests updated and passing (58 tests)
+
+### Version 1.0.0
 - ✅ OAuth 2.0 integration (GitHub, Google)
 - ✅ JWT token management
 - ✅ User management and permissions

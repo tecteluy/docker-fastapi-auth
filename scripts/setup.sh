@@ -2,12 +2,12 @@
 
 set -e
 
-echo "🚀 Docker Atrium Auth Service - Quick Setup"
+echo "🚀 Docker FastAPI Auth Service - Quick Setup"
 echo "==========================================="
 
 # Check if we're in the right directory
 if [ ! -f "LICENSE" ] || [ ! -f "README.md" ]; then
-    echo "❌ Please run this script from the docker-atrium-auth root directory"
+    echo "❌ Please run this script from the docker-fastapi-auth root directory"
     exit 1
 fi
 
@@ -154,7 +154,7 @@ echo "2. Follow MIGRATION.md for detailed migration steps"
 if [ "$MIGRATE_FROM_LENS" = true ]; then
     echo "3. Run: ./scripts/migrate_from_lens.sh"
 else
-    echo "3. Implement auth service code or copy from docker-atrium-lens"
+    echo "3. Implement auth service code or copy from docker-fastapi-lens"
 fi
 
 echo "4. Configure OAuth providers in .env file"

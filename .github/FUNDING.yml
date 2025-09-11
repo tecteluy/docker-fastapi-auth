@@ -1,4 +1,4 @@
-# Funding configuration copied from atrium-tectel
+# Funding configuration copied from fastapi-tectel
 # Avoid putting sensitive financial info directly in the repository.
 
 github: []

@@ -1,10 +1,10 @@
 #!/bin/bash
 
-# Test runner script for Docker Atrium Auth Service
+# Test runner script for Docker FastAPI Auth Service
 
 set -e
 
-echo "🧪 Running tests for Docker Atrium Auth Service"
+echo "🧪 Running tests for Docker FastAPI Auth Service"
 echo "==============================================="
 
 # Function to run tests

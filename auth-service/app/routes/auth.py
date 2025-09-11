@@ -48,7 +48,7 @@ class RefreshTokenRequest(BaseModel):
             raise ValueError('Refresh token cannot be empty')
         return v.strip()
 
-router = APIRouter(prefix="/auth", tags=["Authentication"])
+router = APIRouter(tags=["Authentication"])
 auth_service = AuthService()
 oauth_service = OAuthService()
 token_service = TokenService()
@@ -184,7 +184,7 @@ async def backup_login(request: BackupLoginRequest, db: Session = Depends(get_db
     # Determine email/full_name from config
     cfg_email = user_config.get("email")
     cfg_full = user_config.get("full_name")
-    default_email = f"{backup_username}@atrium.local"
+    default_email = f"{backup_username}@fastapi.local"
     default_full = f"Backup User: {request.username}"
     profile_email = cfg_email or default_email
     profile_full = cfg_full or default_full
@@ -254,3 +254,14 @@ async def refresh_token(
     if result is None:
         raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
     return result
+
+@router.post("/logout")
+async def logout(
+    request: RefreshTokenRequest = Body(...),
+    db: Session = Depends(get_db)
+):
+    """Logout user and revoke refresh token."""
+    success = auth_service.revoke_refresh_token(db, request.refresh_token)
+    if not success:
+        raise HTTPException(status_code=401, detail="Invalid refresh token")
+    return {"message": "Successfully logged out"}

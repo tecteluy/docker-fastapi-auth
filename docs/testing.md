@@ -1,8 +1,8 @@
-# Testing Guide for Docker Atrium Auth Service
+# Testing Guide for Docker FastAPI Auth Service
 
 ## Overview
 
-This document describes the testing setup for the Docker Atrium Auth Service, including how to run tests using Docker Compose.
+This document describes the testing setup for the Docker FastAPI Auth Service, including how to run tests using Docker Compose.
 
 ## Test Structure
 

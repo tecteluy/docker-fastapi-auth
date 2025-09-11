@@ -4,7 +4,7 @@ services:
   # PostgreSQL database for auth service
   auth-db:
     image: postgres:15
-    container_name: atrium-auth-db
+    container_name: fastapi-auth-db
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
@@ -24,7 +24,7 @@ services:
   # Redis for auth service sessions
   auth-redis:
     image: redis:7-alpine
-    container_name: atrium-auth-redis
+    container_name: fastapi-auth-redis
     command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-}
     volumes:
       - auth_redis_data:/data
@@ -42,7 +42,7 @@ services:
     build: 
       context: ./auth-service
       dockerfile: Dockerfile
-    container_name: atrium-auth-service
+    container_name: fastapi-auth-service
     environment:
       # Database Configuration
       - POSTGRES_HOST=auth-db
@@ -72,6 +72,8 @@ services:
       
       # API Configuration
       - API_TOKEN=${API_TOKEN:-changeme}
+      # Backup users configuration
+      - BACKUP_USERS=${BACKUP_USERS}
     depends_on:
       auth-db:
         condition: service_healthy
@@ -92,7 +94,7 @@ services:
   # Test Database
   test-db:
     image: postgres:15
-    container_name: atrium-auth-test-db
+    container_name: fastapi-auth-test-db
     environment:
       POSTGRES_USER: test_user
       POSTGRES_PASSWORD: test_password
@@ -111,7 +113,7 @@ services:
   # Test Redis
   test-redis:
     image: redis:7-alpine
-    container_name: atrium-auth-test-redis
+    container_name: fastapi-auth-test-redis
     command: redis-server --appendonly yes
     volumes:
       - test_redis_data:/data
@@ -129,7 +131,7 @@ services:
     build: 
       context: ./auth-service
       dockerfile: Dockerfile
-    container_name: atrium-auth-test-runner
+    container_name: fastapi-auth-test-runner
     environment:
       # Test Database Configuration
       - POSTGRES_HOST=test-db
@@ -182,6 +184,6 @@ volumes:
 
 networks:
   auth-network:
-    name: atrium-auth-network
+    name: fastapi-auth-network
     driver: bridge
     external: false

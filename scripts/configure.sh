@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 set -e
 
-# Configuration wizard for Atrium Authentication Service
+# Configuration wizard for FastAPI Authentication Service
 # This script will prompt for required environment variables and generate a .env file.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="${SCRIPT_DIR}/.."
 ENV_FILE="$PROJECT_ROOT/.env"
 
-echo "\n=== Atrium Auth Service Configuration Wizard ===\n"
+echo "\n=== FastAPI Auth Service Configuration Wizard ===\n"
 
 # helper to prompt with default value
 prompt() {
@@ -44,8 +44,9 @@ POSTGRES_DB=$(prompt POSTGRES_DB "Postgres DB Name" "atrium_auth")
 POSTGRES_PORT=$(prompt POSTGRES_PORT "Postgres Port" "5432")
 POSTGRES_HOST_AUTH_METHOD=$(prompt POSTGRES_HOST_AUTH_METHOD "Postgres Host Auth Method" "scram-sha-256")
 
-# Redis
-REDIS_PASSWORD=$(prompt REDIS_PASSWORD "Redis Password" "")
+    # Redis
+    # Generate a strong random password if none provided
+    REDIS_PASSWORD=$(prompt REDIS_PASSWORD "Redis Password" "$(openssl rand -hex 16)")
 REDIS_PORT=$(prompt REDIS_PORT "Redis Port" "6379")
 
 # URLs and Ports
@@ -59,7 +60,7 @@ ENVIRONMENT=$(prompt ENVIRONMENT "Environment (production/development)" "product
 
 # Create .env
 cat > "$ENV_FILE" <<EOF
-# Docker Atrium Auth Service Configuration
+# Docker FastAPI Auth Service Configuration
 
 # OAuth Providers Configuration
 GITHUB_CLIENT_ID=$GITHUB_CLIENT_ID

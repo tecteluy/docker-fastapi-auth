@@ -12,7 +12,7 @@ class TestOAuthService:
 
         assert "https://github.com/login/oauth/authorize" in url
         assert "client_id=" in url
-        assert "redirect_uri=http://localhost:3000/auth/callback/github" in url
+        assert "redirect_uri=http://localhost:3000/callback/github" in url
         assert "scope=user:email" in url
         assert "state=test_state" in url
 
@@ -24,7 +24,7 @@ class TestOAuthService:
 
         assert "https://accounts.google.com/o/oauth2/auth" in url
         assert "client_id=" in url
-        assert "redirect_uri=http://localhost:3000/auth/callback/google" in url
+        assert "redirect_uri=http://localhost:3000/callback/google" in url
         assert "scope=openid email profile" in url
         assert "state=test_state" in url
 

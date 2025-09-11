@@ -30,7 +30,7 @@ class TestMakefile:
         )
 
         assert result.returncode == 0
-        assert "Docker Atrium Auth Service - Available Commands:" in result.stdout
+        assert "Docker FastAPI Auth Service - Available Commands:" in result.stdout
         assert "backup-create" in result.stdout
         assert "backup-list" in result.stdout
         assert "backup-hash" in result.stdout
@@ -178,7 +178,7 @@ class TestMakefile:
         )
 
         assert result.returncode == 0
-        assert "Docker Atrium Auth Service - Usage Examples:" in result.stdout
+        assert "Docker FastAPI Auth Service - Usage Examples:" in result.stdout
         assert "make setup" in result.stdout
         assert "make backup-create" in result.stdout
 

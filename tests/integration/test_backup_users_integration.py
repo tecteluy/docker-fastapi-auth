@@ -39,7 +39,7 @@ class TestBackupUserIntegration:
 
             # Verify response
             assert response['user']['username'] == "backup_testuser"
-            assert response['user']['email'] == "backup_testuser@atrium.local"
+            assert response['user']['email'] == "backup_testuser@fastapi.local"
             assert response['user']['is_admin'] == False
             assert response['user']['permissions'] == {'services': ['read']}
             assert 'access_token' in response
@@ -52,7 +52,7 @@ class TestBackupUserIntegration:
             ).first()
 
             assert created_user is not None
-            assert created_user.email == "backup_testuser@atrium.local"
+            assert created_user.email == "backup_testuser@fastapi.local"
             assert created_user.full_name == "Backup User: testuser"
             assert created_user.is_admin == False
             assert created_user.permissions == {'services': ['read']}
@@ -163,7 +163,7 @@ class TestBackupUserIntegration:
         }):
             # Create user with initial permissions
             initial_user = User(
-                email="backup_updateuser@atrium.local",
+                email="backup_updateuser@fastapi.local",
                 username="backup_updateuser",
                 full_name="Backup User: updateuser",
                 provider="backup",

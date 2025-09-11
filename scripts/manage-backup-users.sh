@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # =============================================================================
-# Docker Atrium Auth Service - Backup User Management Script
+# Docker FastAPI Auth Service - Backup User Management Script
 # =============================================================================
 
 set -e
@@ -70,7 +70,7 @@ EOF
 
 # Function to show usage
 show_usage() {
-    echo -e "${BLUE}Docker Atrium Auth Service - Backup User Management${NC}"
+    echo -e "${BLUE}Docker FastAPI Auth Service - Backup User Management${NC}"
     echo
     echo "Usage:"
     echo "  $0 hash <password>              - Generate SHA256 hash for password"

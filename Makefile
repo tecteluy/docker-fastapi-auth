@@ -1,18 +1,23 @@
 # =============================================================================
-# Docker Atrium Auth Service - Makefile
+# Docker FastAPI Auth Service - Makefile
 # =============================================================================
 
-.PHONY: help build up down restart logs test clean backup-user backup-list backup-hash backup-example
+.PHONY: help build up down restart logs test clean backup-user backup-list backup-hash backup-example configure
 
 # Default target
 help: ## Show this help message
-	@echo "Docker Atrium Auth Service - Available Commands:"
+	@echo "Docker FastAPI Auth Service - Available Commands:"
 	@echo ""
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
 # =============================================================================
 # Development Environment
 # =============================================================================
+## Start only the auth service with its database and redis
+.PHONY: dev-auth
+dev-auth: ## Start only auth-service, auth-db, and auth-redis
+	@echo "Starting Auth service with database and redis..."
+	@docker-compose up -d auth-db auth-redis auth-service
 
 build: ## Build all Docker services
 	@echo "Building Docker services..."
@@ -55,6 +60,13 @@ test-integration: ## Run integration tests only
 test-coverage: ## Run tests with coverage report
 	@echo "Running tests with coverage..."
 	docker-compose --profile test run --rm test-runner pytest --cov=app --cov-report=html tests/
+
+# =============================================================================
+# Configuration Wizard
+# =============================================================================
+configure: ## Run interactive configuration wizard to generate .env
+	@echo "Starting configuration wizard..."
+	@./scripts/configure.sh
 
 # =============================================================================
 # Backup User Management
@@ -100,8 +112,8 @@ db-reset: ## Reset database (WARNING: This will delete all data)
 	@read -p "Are you sure? (y/N): " confirm; \
 	if [ "$$confirm" = "y" ] || [ "$$confirm" = "Y" ]; then \
 		docker-compose down; \
-		docker volume rm docker-atrium-auth_postgres_data 2>/dev/null || true; \
-		docker volume rm docker-atrium-auth_redis_data 2>/dev/null || true; \
+		docker volume rm docker-fastapi-auth_postgres_data 2>/dev/null || true; \
+		docker volume rm docker-fastapi-auth_redis_data 2>/dev/null || true; \
 		docker-compose up -d postgres redis; \
 		sleep 5; \
 		make db-init; \
@@ -200,7 +212,7 @@ setup: ## Quick setup for new developers
 # =============================================================================
 
 examples: ## Show usage examples
-	@echo "Docker Atrium Auth Service - Usage Examples:"
+	@echo "Docker FastAPI Auth Service - Usage Examples:"
 	@echo "=========================================="
 	@echo ""
 	@echo "# Start development environment"
