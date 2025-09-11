@@ -1,12 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Body
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from ..database import get_db
 from ..services.auth_service import AuthService
 from ..services.oauth_service import OAuthService
 from ..middleware.auth_middleware import get_current_user
-from ..services.token_service import TokenService
 from pydantic import BaseModel, field_validator
+from sqlalchemy.orm import Session
+from ..database import get_db
+from ..services.token_service import TokenService
 import secrets
 import re
 
@@ -82,16 +84,16 @@ async def auth_callback(
     # Exchange code for user data
     if provider == "github":
         oauth_data = await oauth_service.exchange_github_code(code)
-    else:  # google
+    else:
         oauth_data = await oauth_service.exchange_google_code(code)
 
     if not oauth_data:
         raise HTTPException(status_code=400, detail="OAuth authentication failed")
 
-    # Create or update user
+    # Create or update user based on OAuth data
     user = auth_service.create_or_update_user(db, oauth_data)
 
-    # Create tokens
+    # Generate JWT tokens for the authenticated user
     tokens = auth_service.create_tokens(db, user)
 
     return {
@@ -106,20 +108,6 @@ async def auth_callback(
         },
         **tokens
     }
-
-@router.post("/refresh")
-async def refresh_token(request: RefreshTokenRequest, db: Session = Depends(get_db)):
-    """Refresh access token."""
-    tokens = auth_service.refresh_access_token(db, request.refresh_token)
-    if not tokens:
-        raise HTTPException(status_code=401, detail="Invalid refresh token")
-    return tokens
-
-@router.post("/logout")
-async def logout(request: RefreshTokenRequest, db: Session = Depends(get_db)):
-    """Logout user and revoke refresh token."""
-    auth_service.revoke_refresh_token(db, request.refresh_token)
-    return {"message": "Logged out successfully"}
 
 @router.post("/backup-login")
 async def backup_login(request: BackupLoginRequest, db: Session = Depends(get_db)):
@@ -185,21 +173,28 @@ async def backup_login(request: BackupLoginRequest, db: Session = Depends(get_db
         
         raise HTTPException(status_code=401, detail="Invalid backup credentials")
     
-    # Create or get backup user
+    # Create or get backup user, using configured profile values
     from ..models.user import User
+    backup_username = f"backup_{request.username}"
     backup_user = db.query(User).filter(
-        User.username == f"backup_{request.username}",
+        User.username == backup_username,
         User.provider == "backup"
     ).first()
 
+    # Determine email/full_name from config
+    cfg_email = user_config.get("email")
+    cfg_full = user_config.get("full_name")
+    default_email = f"{backup_username}@atrium.local"
+    default_full = f"Backup User: {request.username}"
+    profile_email = cfg_email or default_email
+    profile_full = cfg_full or default_full
+
     if not backup_user:
-        # Use provided email/full_name or default values
-        user_email = request.email or f"backup_{request.username}@atrium.local"
-        user_full_name = request.full_name or f"Backup User: {request.username}"
+        # Create new backup user with configured values
         backup_user = User(
-            email=user_email,
-            username=f"backup_{request.username}",
-            full_name=user_full_name,
+            email=profile_email,
+            username=backup_username,
+            full_name=profile_full,
             provider="backup",
             provider_id=request.username,
             is_active=True,
@@ -210,6 +205,11 @@ async def backup_login(request: BackupLoginRequest, db: Session = Depends(get_db
         db.add(backup_user)
         db.commit()
         db.refresh(backup_user)
+    else:
+        # Update existing backup user with configured profile values (do not update admin/permissions)
+        backup_user.email = profile_email
+        backup_user.full_name = profile_full
+        db.commit()
 
     # Log successful backup login for security monitoring
     import logging
@@ -243,3 +243,14 @@ async def get_current_user(current_user=Depends(get_current_user)):
         "is_admin": current_user.is_admin,
         "permissions": current_user.permissions
     }
+
+@router.post("/refresh")
+async def refresh_token(
+    request: RefreshTokenRequest = Body(...),
+    db: Session = Depends(get_db)
+):
+    """Refresh access token using provided refresh token."""
+    result = auth_service.refresh_access_token(db, request.refresh_token)
+    if result is None:
+        raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
+    return result
