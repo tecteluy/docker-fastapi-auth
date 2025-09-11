@@ -1,6 +1,10 @@
 # Test configuration and shared fixtures
 import pytest
 import asyncio
+import tempfile
+import logging
+from pathlib import Path
+from unittest.mock import Mock, patch
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from fastapi.testclient import TestClient
@@ -10,6 +14,13 @@ import os
 from app.main import app
 from app.database import get_db, Base
 from app.config import settings
+
+# Import logging fixtures
+from .conftest_logging import (
+    temp_log_directory, mock_logging_settings, isolated_logger,
+    mock_request, mock_response, logging_test_config, logging_assertions,
+    test_data_generator
+)
 
 # Test database configuration
 TEST_DATABASE_URL = "postgresql://test_user:test_password@test-db:5432/test_db"

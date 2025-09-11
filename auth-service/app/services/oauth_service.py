@@ -3,7 +3,8 @@ from typing import Optional, Dict, Any
 import logging
 from ..config import settings
 
-logger = logging.getLogger(__name__)
+# Use the OAuth-specific logger
+logger = logging.getLogger("fastapi.oauth")
 
 class OAuthService:
     def __init__(self):

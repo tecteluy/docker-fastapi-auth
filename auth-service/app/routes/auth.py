@@ -11,6 +11,10 @@ from ..database import get_db
 from ..services.token_service import TokenService
 import secrets
 import re
+import logging
+
+# Use auth-specific logger
+logger = logging.getLogger("fastapi.auth")
 
 class BackupLoginRequest(BaseModel):
     username: str

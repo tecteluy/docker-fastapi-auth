@@ -2,7 +2,7 @@
 # Docker FastAPI Auth Service - Makefile
 # =============================================================================
 
-.PHONY: help build up down restart logs test clean backup-user backup-list backup-hash backup-example configure
+.PHONY: help
 
 # Default target
 help: ## Show this help message
@@ -14,10 +14,7 @@ help: ## Show this help message
 # Development Environment
 # =============================================================================
 ## Start only the auth service with its database and redis
-.PHONY: dev-auth
-dev-auth: ## Start only auth-service, auth-db, and auth-redis
-	@echo "Starting Auth service with database and redis..."
-	@docker-compose up -d auth-db auth-redis auth-service
+.PHONY: build up down restart logs logs-auth
 
 build: ## Build all Docker services
 	@echo "Building Docker services..."
@@ -25,7 +22,7 @@ build: ## Build all Docker services
 
 up: ## Start all services
 	@echo "Starting services..."
-	docker-compose up -d
+	@docker-compose up -d auth-db auth-redis auth-service
 
 down: ## Stop all services
 	@echo "Stopping services..."
@@ -34,6 +31,9 @@ down: ## Stop all services
 restart: ## Restart all services
 	@echo "Restarting services..."
 	docker-compose restart
+
+reset: down build up ## Reset the development environment
+	@echo "Development environment reset complete."
 
 logs: ## Show logs from all services
 	docker-compose logs -f
@@ -44,7 +44,7 @@ logs-auth: ## Show logs from auth service only
 # =============================================================================
 # Testing
 # =============================================================================
-
+.PHONY: test test-unit test-integration test-coverage
 test: ## Run all tests
 	@echo "Running tests..."
 	docker-compose --profile test run --rm test-runner pytest tests/ -v --tb=short
@@ -64,6 +64,8 @@ test-coverage: ## Run tests with coverage report
 # =============================================================================
 # Configuration Wizard
 # =============================================================================
+.PHONY: configure
+
 configure: ## Run interactive configuration wizard to generate .env
 	@echo "Starting configuration wizard..."
 	@./scripts/configure.sh
@@ -71,6 +73,7 @@ configure: ## Run interactive configuration wizard to generate .env
 # =============================================================================
 # Backup User Management
 # =============================================================================
+.PHONY: backup-hash backup-create backup-list backup-example
 
 backup-hash: ## Generate SHA256 hash for a password
 	@echo "Usage: make backup-hash PASSWORD=your_password"
@@ -101,6 +104,7 @@ backup-example: ## Show example backup users configuration
 # =============================================================================
 # Database Management
 # =============================================================================
+.PHONY: db-init db-reset
 
 db-init: ## Initialize database (run migrations)
 	@echo "Initializing database..."
@@ -124,6 +128,7 @@ db-reset: ## Reset database (WARNING: This will delete all data)
 # =============================================================================
 # Health Checks
 # =============================================================================
+.PHONY: health status
 
 health: ## Check service health
 	@echo "Checking service health..."
@@ -140,6 +145,7 @@ status: ## Show service status
 # =============================================================================
 # Cleanup
 # =============================================================================
+.PHONY: clean clean-all
 
 clean: ## Clean up Docker resources
 	@echo "Cleaning up..."
@@ -160,6 +166,7 @@ clean-all: ## Clean up everything including volumes (WARNING: This deletes all d
 # =============================================================================
 # Development Helpers
 # =============================================================================
+.PHONY: shell shell-db format lint
 
 shell: ## Open shell in auth service container
 	docker-compose exec auth-service bash
@@ -176,6 +183,7 @@ lint: ## Lint Python code with flake8
 # =============================================================================
 # Production Deployment
 # =============================================================================
+.PHONY: deploy deploy-logs
 
 deploy: ## Deploy to production (build and start)
 	@echo "Deploying to production..."
@@ -187,6 +195,7 @@ deploy-logs: ## Show production logs
 # =============================================================================
 # Quick Setup for New Developers
 # =============================================================================
+.PHONY: setup
 
 setup: ## Quick setup for new developers
 	@echo "Setting up development environment..."
@@ -210,6 +219,7 @@ setup: ## Quick setup for new developers
 # =============================================================================
 # Examples and Documentation
 # =============================================================================
+.PHONY: examples
 
 examples: ## Show usage examples
 	@echo "Docker FastAPI Auth Service - Usage Examples:"

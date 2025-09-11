@@ -41,6 +41,13 @@ class Settings(BaseSettings):
     # Environment
     environment: str = "production"
 
+    # Logging Configuration
+    enable_request_logging: bool = True
+    log_level: str = "INFO"
+    log_format: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    log_file_max_bytes: int = 10485760  # 10MB
+    log_file_backup_count: int = 5
+
     model_config = ConfigDict(env_file=".env", extra="ignore")
 
 settings = Settings()

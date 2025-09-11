@@ -21,7 +21,18 @@ This service provides enterprise-grade authentication and authorization, featuri
 - **🎟️ JWT Token Management**
   - Access tokens (configurable expiry, default 30 minutes)
   - Refresh tokens (configurable expiry, default 7 days)
-  - Secure token revocation and blacklisting
+  - Secure## 📚 Documentation
+
+For comprehensive documentation and guides, see the [`docs/`](./docs/) directory:
+
+- **[Logging System](./docs/LOGGING.md)** - Request/response logging and monitoring
+- **[Testing Guide](./docs/testing.md)** - Development and testing workflow
+- **[Release Notes](./docs/RELEASE_NOTES_v1.1.0.md)** - Version 1.1.0 release information
+
+Quick access:
+- **API Documentation**: http://localhost:8008/docs (Swagger UI)
+- **API Specification**: [`docs/openapi.json`](./docs/openapi.json)
+- **Documentation Index**: [`docs/README.md`](./docs/README.md)ion and blacklisting
   
 - **👥 User Management**
   - Comprehensive user profiles
@@ -899,7 +910,22 @@ This project is licensed under the GNU General Public License v3.0 - see the [LI
 - **Documentation**: This README and inline code documentation
 - **Security Issues**: Report privately to security@tectel.com.uy
 
-## 🔄 Changelog
+## � Documentation
+
+For comprehensive documentation and guides, see the [`docs/`](./docs/) directory:
+
+- **[Complete Setup Guide](./docs/README_COMPLETE.md)** - Detailed installation and configuration
+- **[Logging System](./docs/LOGGING.md)** - Request/response logging and monitoring
+- **[Testing Guide](./docs/testing.md)** - Development and testing workflow
+- **[Project Analysis](./docs/PROJECT_ANALYSIS_REPORT.md)** - Architecture and design decisions
+- **[Release Documentation](./docs/)** - Version history and release notes
+
+Quick access:
+- **API Documentation**: http://localhost:8008/docs (Swagger UI)
+- **API Specification**: [`docs/openapi.json`](./docs/openapi.json)
+- **Documentation Index**: [`docs/README.md`](./docs/README.md)
+
+## �🔄 Changelog
 
 ### Version 1.1.0 (Current)
 - ✅ Project rebranded to "FastAPI Authentication Service"

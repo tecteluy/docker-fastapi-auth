@@ -68,12 +68,18 @@ services:
       
       # Application URLs
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
-      - BACKEND_URL=${BACKEND_URL:-http://localhost:8006}
+      - BACKEND_URL=${BACKEND_URL:-http://localhost:8008}
       
       # API Configuration
       - API_TOKEN=${API_TOKEN:-changeme}
       # Backup users configuration
       - BACKUP_USERS=${BACKUP_USERS}
+      
+      # Logging Configuration
+      - ENABLE_REQUEST_LOGGING=${ENABLE_REQUEST_LOGGING:-true}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      - ./logs:/app/logs
     depends_on:
       auth-db:
         condition: service_healthy

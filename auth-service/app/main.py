@@ -5,13 +5,11 @@ import logging
 from .database import engine, Base
 from .routes.auth import router as auth_router
 from .config import settings
+from .logging_config import setup_logging
+from .middleware import RequestLoggingMiddleware
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO if settings.environment == "production" else logging.DEBUG,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
-logger = logging.getLogger(__name__)
+# Setup logging system
+logger = setup_logging()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -34,6 +32,12 @@ app = FastAPI(
     description="OAuth 2.0 / OpenID Connect authentication service for FastAPI",
     version="1.1.0",
     lifespan=lifespan
+)
+
+# Add request logging middleware
+app.add_middleware(
+    RequestLoggingMiddleware,
+    enable_request_logging=settings.enable_request_logging
 )
 
 # CORS middleware

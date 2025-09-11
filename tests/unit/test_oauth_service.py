@@ -73,8 +73,9 @@ class TestOAuthService:
         mock_client = AsyncMock()
         mock_client_class.return_value.__aenter__.return_value = mock_client
 
-        # Mock failed token response
+        # Mock failed token response with status_code check
         mock_token_response = AsyncMock()
+        mock_token_response.status_code = 400  # Add status code
         mock_token_response.json.side_effect = Exception("Token request failed")
         mock_client.post.return_value = mock_token_response
 
