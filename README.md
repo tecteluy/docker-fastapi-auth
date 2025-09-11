@@ -1,6 +1,31 @@
 # FastAPI Authentication Service
 
-A production-ready, centralized OAuth 2.0 / OpenID Connect authentication service for FastAPI.
+A prod- **📊 Comprehensive Logging System**
+  - Request/response logging middleware with sensitive data masking
+  - Multi-file logging (requests, auth, oauth, error, app, database)
+  - Configurable logging levels and rotation
+  - Performance monitoring with memory usage tracking
+  - Async logging support for high-traffic scenarios
+  - Docker volume persistence for log files
+  
+- **🔧 Operational Features**
+  - Health monitoring endpoints
+  - Database migrations (Alembic)
+  - Testing framework (114 tests)
+  - Docker containerization
+
+## 📚 Documentation
+
+For comprehensive documentation and guides, see the [`docs/`](./docs/) directory:
+
+- **[Logging System](./docs/LOGGING.md)** - Request/response logging and monitoring
+- **[Testing Guide](./docs/testing.md)** - Development and testing workflow
+- **[Release Notes](./docs/RELEASE_NOTES_v1.1.1.md)** - Version 1.1.1 release information
+
+Quick access:
+- **API Documentation**: http://localhost:8008/docs (Swagger UI)
+- **API Specification**: [`docs/openapi.json`](./docs/openapi.json)
+- **Documentation Index**: [`docs/README.md`](./docs/README.md)ntralized OAuth 2.0 / OpenID Connect authentication service for FastAPI.
 
 [![Version](https://img.shields.io/badge/version-1.1.1-blue)]()
 [![Tests](https://img.shields.io/badge/tests-114%20passing-brightgreen)]()
@@ -21,41 +46,9 @@ This service provides enterprise-grade authentication and authorization, featuri
   - Extensible provider architecture
   
 - **🎟️ JWT Token Management**
-  - Access tokens (configurable ## 🔄 Changelog
-
-### Version 1.1.1 (Current)
-- ✅ **Comprehensive Logging Middleware System**
-  - Request/response logging with sensitive data masking
-  - Multi-file logging (requests, auth, oauth, error, app, database)
-  - Configurable logging levels and Docker volume persistence
-  - Performance monitoring with memory usage tracking
-  - Async logging support for high-traffic scenarios
-- ✅ **Service Port Update**: Changed from 8006 to 8008
-- ✅ **Enhanced Testing**: 114 tests passing (unit, integration, e2e)
-- ✅ **Updated Documentation**: Comprehensive logging guides and examples
-- ✅ **Production Ready**: Full logging system with security features
-
-### Version 1.1.0
-- ✅ Project rebranded to "FastAPI Authentication Service"
-- ✅ Updated container and network names
-- ✅ **Simplified API endpoints** - removed `/auth` prefix
-- ✅ Enhanced OAuth callback URL structure
-- ✅ Enhanced documentation and guides
-- ✅ Improved configuration scripts
-- ✅ All tests updated and passing (58 tests)fault 30 minutes)
+  - Access tokens (configurable expiry, default 30 minutes)
   - Refresh tokens (configurable expiry, default 7 days)
-  - Secure## 📚 Documentation
-
-For comprehensive documentation and guides, see the [`docs/`](./docs/) directory:
-
-- **[Logging System](./docs/LOGGING.md)** - Request/response logging and monitoring
-- **[Testing Guide](./docs/testing.md)** - Development and testing workflow
-- **[Release Notes](./docs/RELEASE_NOTES_v1.1.1.md)** - Version 1.1.1 release information
-
-Quick access:
-- **API Documentation**: http://localhost:8008/docs (Swagger UI)
-- **API Specification**: [`docs/openapi.json`](./docs/openapi.json)
-- **Documentation Index**: [`docs/README.md`](./docs/README.md)ion and blacklisting
+  - Secure token generation and blacklisting
   
 - **👥 User Management**
   - Comprehensive user profiles
@@ -647,24 +640,31 @@ docker-compose exec auth-service pytest --cov=app --cov-report=html tests/
 
 ### Test Categories
 
-- **Unit Tests**: Service logic, token handling, OAuth flows
-- **Integration Tests**: Database operations, API endpoints
-- **E2E Tests**: Complete authentication flows
+- **Unit Tests**: Service logic, token handling, OAuth flows, logging middleware
+- **Integration Tests**: Database operations, API endpoints, logging integration
+- **E2E Tests**: Complete authentication flows, logging end-to-end flows
 
 ### Test Results
 ```
 ============================= test session starts ==============================
-collected 39 items
+collected 129 items
 
-tests/integration/test_auth_endpoints.py .............. [ 35%]
-tests/integration/test_database_integration.py ...... [ 51%]
-tests/integration/test_health.py ........ [ 64%]
-tests/unit/test_auth_middleware.py .......... [ 89%]
-tests/unit/test_auth_service.py .... [ 94%]
-tests/unit/test_oauth_service.py .... [ 97%]
+tests/e2e/test_logging_e2e.py .................... [ 14%]
+tests/integration/test_auth_endpoints.py .............. [ 24%]
+tests/integration/test_backup_users_integration.py .... [ 27%]
+tests/integration/test_database_integration.py ...... [ 32%]
+tests/integration/test_health.py .... [ 35%]
+tests/integration/test_logging_integration.py .................... [ 50%]
+tests/unit/test_auth_middleware.py .......... [ 58%]
+tests/unit/test_auth_service.py .... [ 61%]
+tests/unit/test_backup_users.py ...... [ 66%]
+tests/unit/test_backup_users_v2.py ...... [ 71%]
+tests/unit/test_logging_middleware.py .................... [ 87%]
+tests/unit/test_makefile.py .............. [ 98%]
+tests/unit/test_oauth_service.py .... [ 99%]
 tests/unit/test_token_service.py .... [100%]
 
-======================== 39 passed in 0.43s ========================
+========== 114 passed, 15 skipped, 13 warnings in 5.10s ==========
 ```
 
 ## 🚀 Development
@@ -958,9 +958,21 @@ Quick access:
 - **API Specification**: [`docs/openapi.json`](./docs/openapi.json)
 - **Documentation Index**: [`docs/README.md`](./docs/README.md)
 
-## �🔄 Changelog
+## 🔄 Changelog
 
-### Version 1.1.0 (Current)
+### Version 1.1.1 (Current)
+- ✅ **Comprehensive Logging Middleware System**
+  - Request/response logging with sensitive data masking
+  - Multi-file logging (requests, auth, oauth, error, app, database)
+  - Configurable logging levels and Docker volume persistence
+  - Performance monitoring with memory usage tracking
+  - Async logging support for high-traffic scenarios
+- ✅ **Service Port Update**: Changed from 8006 to 8008
+- ✅ **Enhanced Testing**: 114 tests passing (unit, integration, e2e)
+- ✅ **Updated Documentation**: Comprehensive logging guides and examples
+- ✅ **Production Ready**: Full logging system with security features
+
+### Version 1.1.0
 - ✅ Project rebranded to "FastAPI Authentication Service"
 - ✅ Updated container and network names
 - ✅ **Simplified API endpoints** - removed `/auth` prefix
@@ -974,7 +986,7 @@ Quick access:
 - ✅ JWT token management
 - ✅ User management and permissions
 - ✅ Redis session storage
-- ✅ Comprehensive testing (114 tests)
+- ✅ Comprehensive testing (39 tests)
 - ✅ Docker containerization
 - ✅ Health monitoring
 
