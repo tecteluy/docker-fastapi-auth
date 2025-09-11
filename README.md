@@ -2,10 +2,12 @@
 
 A production-ready, centralized OAuth 2.0 / OpenID Connect authentication service for FastAPI.
 
-[![Version](https://img.shields.io/badge/version-1.1.0-blue)]()
-[![Tests](https://img.shields.io/badge/tests-39%20passing-brightgreen)]()
+[![Version](https://img.shields.io/badge/version-1.1.1-blue)]()
+[![Tests](https://img.shields.io/badge/tests-114%20passing-brightgreen)]()
 [![Security](https://img.shields.io/badge/security-audited-blue)]()
 [![Docker](https://img.shields.io/badge/docker-ready-blue)]()
+[![Logging](https://img.shields.io/badge/logging-comprehensive-green)]()
+[![Port](https://img.shields.io/badge/port-8008-orange)]()
 
 ## 🚀 Overview
 
@@ -19,7 +21,28 @@ This service provides enterprise-grade authentication and authorization, featuri
   - Extensible provider architecture
   
 - **🎟️ JWT Token Management**
-  - Access tokens (configurable expiry, default 30 minutes)
+  - Access tokens (configurable ## 🔄 Changelog
+
+### Version 1.1.1 (Current)
+- ✅ **Comprehensive Logging Middleware System**
+  - Request/response logging with sensitive data masking
+  - Multi-file logging (requests, auth, oauth, error, app, database)
+  - Configurable logging levels and Docker volume persistence
+  - Performance monitoring with memory usage tracking
+  - Async logging support for high-traffic scenarios
+- ✅ **Service Port Update**: Changed from 8006 to 8008
+- ✅ **Enhanced Testing**: 114 tests passing (unit, integration, e2e)
+- ✅ **Updated Documentation**: Comprehensive logging guides and examples
+- ✅ **Production Ready**: Full logging system with security features
+
+### Version 1.1.0
+- ✅ Project rebranded to "FastAPI Authentication Service"
+- ✅ Updated container and network names
+- ✅ **Simplified API endpoints** - removed `/auth` prefix
+- ✅ Enhanced OAuth callback URL structure
+- ✅ Enhanced documentation and guides
+- ✅ Improved configuration scripts
+- ✅ All tests updated and passing (58 tests)fault 30 minutes)
   - Refresh tokens (configurable expiry, default 7 days)
   - Secure## 📚 Documentation
 
@@ -27,7 +50,7 @@ For comprehensive documentation and guides, see the [`docs/`](./docs/) directory
 
 - **[Logging System](./docs/LOGGING.md)** - Request/response logging and monitoring
 - **[Testing Guide](./docs/testing.md)** - Development and testing workflow
-- **[Release Notes](./docs/RELEASE_NOTES_v1.1.0.md)** - Version 1.1.0 release information
+- **[Release Notes](./docs/RELEASE_NOTES_v1.1.1.md)** - Version 1.1.1 release information
 
 Quick access:
 - **API Documentation**: http://localhost:8008/docs (Swagger UI)
@@ -47,11 +70,21 @@ Quick access:
   - CORS configuration
   - Rate limiting protection
   
-- **🔧 Operational Features**
+- **� Comprehensive Logging System**
+  - Request/response logging middleware with sensitive data masking
+  - Multi-file logging (requests, auth, oauth, error, app, database)
+  - Configurable logging levels and rotation
+  - Performance monitoring with memory usage tracking
+  - Async logging support for high-traffic scenarios
+  - Docker volume persistence for log files
+  
+- **�🔧 Operational Features**
   - Health monitoring endpoints
-  - Comprehensive logging
+  - Comprehensive logging with middleware
+  - Request/response logging with sensitive data masking
+  - Multi-file logging system (requests, auth, oauth, error, app, database)
   - Database migrations (Alembic)
-  - Testing framework (39 tests)
+  - Testing framework (114 tests)
   - Docker containerization
 
 ## 🏗️ Architecture
@@ -941,7 +974,7 @@ Quick access:
 - ✅ JWT token management
 - ✅ User management and permissions
 - ✅ Redis session storage
-- ✅ Comprehensive testing (39 tests)
+- ✅ Comprehensive testing (114 tests)
 - ✅ Docker containerization
 - ✅ Health monitoring
 
