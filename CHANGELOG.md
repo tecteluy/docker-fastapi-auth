@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.2] - 2025-09-29
+
+### Fixed
+- **OAuth Integration**: Fixed OAuth redirect logic to properly redirect to frontend with tokens
+- **Token Handling**: Corrected OAuth callback redirect to use `redirect_uri` instead of hardcoded frontend URL
+- **Frontend Integration**: Improved OAuth flow completion for Angular frontend integration
+
+### Technical Details
+- Updated OAuth callback redirect mechanism in `auth.py`
+- Fixed token passing to frontend applications
+- Maintained backward compatibility for existing OAuth configurations
+
+## [1.1.1] - 2025-09-28
+
+### Fixed
+- Minor bug fixes and improvements
+
+## [1.1.0] - 2025-09-11
+
 ## [1.1.0] - 2025-09-11
 
 ### Changed

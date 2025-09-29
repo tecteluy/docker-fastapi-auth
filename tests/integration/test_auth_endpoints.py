@@ -41,21 +41,25 @@ class TestAuthEndpoints:
             "provider_data": {"login": "testuser"}
         }
 
-        response = test_client.get("/callback/github?code=test_code&state=test_state")
-        assert response.status_code == 200
-        data = response.json()
-        assert "access_token" in data
-        assert "refresh_token" in data
-        assert "token_type" in data
+        response = test_client.get("/callback/github?code=test_code&state=test_state", allow_redirects=False)
+        assert response.status_code == 307  # Redirect status
+        location = response.headers.get("location")
+        assert location is not None
+        assert "http://localhost:3000/" in location
+        assert "access_token=" in location
+        assert "refresh_token=" in location
+        assert "token_type=bearer" in location
 
     @patch('app.services.oauth_service.OAuthService.exchange_github_code')
     def test_github_callback_oauth_error(self, mock_exchange, test_client: TestClient):
         """Test GitHub OAuth callback with OAuth service error."""
         mock_exchange.return_value = None
 
-        response = test_client.get("/callback/github?code=test_code&state=test_state")
-        assert response.status_code == 400
-        assert "OAuth authentication failed" in response.json()["detail"]
+        response = test_client.get("/callback/github?code=test_code&state=test_state", allow_redirects=False)
+        assert response.status_code == 307  # Redirect status
+        location = response.headers.get("location")
+        assert location is not None
+        assert location == "http://localhost:3000/?error=oauth_failed"
 
     def test_callback_missing_parameters(self, test_client: TestClient):
         """Test OAuth callback with missing parameters."""

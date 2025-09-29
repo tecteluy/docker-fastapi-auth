@@ -174,6 +174,7 @@ async def auth_callback(
         state_part, redirect_uri = state.split(":", 1)
     except ValueError:
         # Fallback for old state format without redirect_uri
+        from ..config import settings
         redirect_uri = f"{settings.frontend_url}/auth/callback"
         state_part = state
 

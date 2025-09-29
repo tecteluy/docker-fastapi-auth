@@ -38,8 +38,8 @@ class TestLoggingEndToEnd:
             "code": "test_code",
             "state": "test_state"
         }
-        response = client.get("/callback/github", params=callback_data)
-        assert response.status_code in [302, 400, 422, 500]
+        response = client.get("/callback/github", params=callback_data, allow_redirects=False)
+        assert response.status_code in [307, 302, 400, 422, 500]
         
         # Step 3: Test token refresh endpoint
         headers = {"Authorization": "Bearer test_token"}
@@ -314,8 +314,8 @@ class TestLoggingInProduction:
             client.get("/login/github")
         
         # Invalid OAuth states
-        response = client.get("/callback/github?code=test&state=invalid")
-        assert response.status_code in [400, 422]
+        response = client.get("/callback/github?code=test&state=invalid", allow_redirects=False)
+        assert response.status_code in [307, 400, 422]
         
         # Malformed tokens
         response = client.get("/me", headers={"Authorization": "Bearer malformed.jwt.token"})

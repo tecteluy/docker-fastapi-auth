@@ -8,7 +8,7 @@ class TestOAuthService:
         """Test GitHub OAuth URL generation."""
         service = OAuthService()
 
-        url = service.get_github_auth_url("test_state")
+        url = service.get_github_auth_url("test_state", "http://localhost:3000/callback/github")
 
         assert "https://github.com/login/oauth/authorize" in url
         assert "client_id=" in url
@@ -20,7 +20,7 @@ class TestOAuthService:
         """Test Google OAuth URL generation."""
         service = OAuthService()
 
-        url = service.get_google_auth_url("test_state")
+        url = service.get_google_auth_url("test_state", "http://localhost:3000/callback/google")
 
         assert "https://accounts.google.com/o/oauth2/auth" in url
         assert "client_id=" in url
@@ -110,7 +110,7 @@ class TestOAuthService:
             }
             mock_client.get.return_value = mock_user_response
 
-            result = await service.exchange_google_code("test_code")
+            result = await service.exchange_google_code("test_code", "http://localhost:3000/callback/google")
 
             assert result is not None
             assert result["email"] == "test@example.com"

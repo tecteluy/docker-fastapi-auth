@@ -30,7 +30,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="FastAPI Authentication Service",
     description="OAuth 2.0 / OpenID Connect authentication service for FastAPI",
-    version="1.1.0",
+    version="1.1.2",
     lifespan=lifespan
 )
 
