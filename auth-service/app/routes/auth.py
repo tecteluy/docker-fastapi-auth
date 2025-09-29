@@ -63,14 +63,20 @@ async def login(provider: str, request: Request):
     if provider not in ["github", "google"]:
         raise HTTPException(status_code=400, detail="Unsupported provider")
 
+    # Get redirect_uri from query parameters (sent by Angular app)
+    redirect_uri = request.query_params.get("redirect_uri")
+    if not redirect_uri:
+        # Fallback to configured frontend URL if no redirect_uri provided
+        redirect_uri = f"{settings.frontend_url}/auth/callback"
+
     # Generate state for CSRF protection
     state = secrets.token_urlsafe(32)
 
     # Store state in session (you might want to use Redis for production)
     if provider == "github":
-        auth_url = oauth_service.get_github_auth_url(state)
+        auth_url = oauth_service.get_github_auth_url(state, redirect_uri)
     else:  # google
-        auth_url = oauth_service.get_google_auth_url(state)
+        auth_url = oauth_service.get_google_auth_url(state, redirect_uri)
 
     return {"auth_url": auth_url, "state": state}
 
@@ -92,7 +98,9 @@ async def auth_callback(
         oauth_data = await oauth_service.exchange_google_code(code)
 
     if not oauth_data:
-        raise HTTPException(status_code=400, detail="OAuth authentication failed")
+        # Redirect to frontend with error
+        error_redirect = f"{settings.frontend_url}/?error=oauth_failed"
+        return RedirectResponse(url=error_redirect)
 
     # Create or update user based on OAuth data
     user = auth_service.create_or_update_user(db, oauth_data)
@@ -100,18 +108,15 @@ async def auth_callback(
     # Generate JWT tokens for the authenticated user
     tokens = auth_service.create_tokens(db, user)
 
-    return {
-        "user": {
-            "id": user.id,
-            "email": user.email,
-            "username": user.username,
-            "full_name": user.full_name,
-            "avatar_url": user.avatar_url,
-            "is_admin": user.is_admin,
-            "permissions": user.permissions
-        },
-        **tokens
-    }
+    # Redirect to frontend with tokens as URL fragments
+    success_redirect = (
+        f"{settings.frontend_url}/"
+        f"?access_token={tokens['access_token']}"
+        f"&refresh_token={tokens['refresh_token']}"
+        f"&token_type={tokens['token_type']}"
+        f"&expires_in={tokens['expires_in']}"
+    )
+    return RedirectResponse(url=success_redirect)
 
 @router.post("/backup-login")
 async def backup_login(request: BackupLoginRequest, db: Session = Depends(get_db)):

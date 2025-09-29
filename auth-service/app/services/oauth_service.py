@@ -14,9 +14,8 @@ class OAuthService:
         self.google_client_secret = settings.google_client_secret
         self.frontend_url = settings.frontend_url
 
-    def get_github_auth_url(self, state: str) -> str:
+    def get_github_auth_url(self, state: str, redirect_uri: str) -> str:
         """Generate GitHub OAuth authorization URL."""
-        redirect_uri = f"{self.frontend_url}/callback/github"
         return (
             f"https://github.com/login/oauth/authorize"
             f"?client_id={self.github_client_id}"
@@ -25,9 +24,8 @@ class OAuthService:
             f"&state={state}"
         )
 
-    def get_google_auth_url(self, state: str) -> str:
+    def get_google_auth_url(self, state: str, redirect_uri: str) -> str:
         """Generate Google OAuth authorization URL."""
-        redirect_uri = f"{self.frontend_url}/callback/google"
         return (
             f"https://accounts.google.com/o/oauth2/auth"
             f"?client_id={self.google_client_id}"
@@ -96,7 +94,7 @@ class OAuthService:
     async def exchange_google_code(self, code: str) -> Optional[Dict[str, Any]]:
         """Exchange Google authorization code for access token and user data."""
         try:
-            redirect_uri = f"{self.frontend_url}/callback/google"
+            redirect_uri = f"{self.frontend_url}/auth/callback"
 
             async with httpx.AsyncClient() as client:
                 # Exchange code for access token
