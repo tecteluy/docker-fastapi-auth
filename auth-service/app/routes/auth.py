@@ -4,14 +4,14 @@ from sqlalchemy.orm import Session
 from ..database import get_db
 from ..services.auth_service import AuthService
 from ..services.oauth_service import OAuthService
-from ..middleware.auth_middleware import get_current_user
-from pydantic import BaseModel, field_validator
-from sqlalchemy.orm import Session
-from ..database import get_db
 from ..services.token_service import TokenService
-import secrets
-import re
+from ..middleware.auth_middleware import get_current_user
+from ..config import settings
+from pydantic import BaseModel, field_validator
+from urllib.parse import quote, unquote
 import logging
+import re
+import secrets
 
 # Use auth-specific logger
 logger = logging.getLogger("fastapi.auth")
@@ -21,7 +21,7 @@ class BackupLoginRequest(BaseModel):
     password: str
     email: str | None = None
     full_name: str | None = None
-    
+
     @field_validator('username')
     @classmethod
     def validate_username(cls, v):
@@ -32,7 +32,7 @@ class BackupLoginRequest(BaseModel):
         if not re.match(r'^[a-zA-Z0-9_.-]+$', v):
             raise ValueError('Username contains invalid characters')
         return v.strip()
-    
+
     @field_validator('password')
     @classmethod
     def validate_password(cls, v):
@@ -44,7 +44,7 @@ class BackupLoginRequest(BaseModel):
 
 class RefreshTokenRequest(BaseModel):
     refresh_token: str
-    
+
     @field_validator('refresh_token')
     @classmethod
     def validate_refresh_token(cls, v):
@@ -72,13 +72,91 @@ async def login(provider: str, request: Request):
     # Generate state for CSRF protection
     state = secrets.token_urlsafe(32)
 
+    # Store redirect_uri and provider in state for later retrieval (you might want to use Redis for production)
+    # For now, we'll embed it in the state parameter
+    state_data = f"{state}:{redirect_uri}:{provider}"
+
     # Store state in session (you might want to use Redis for production)
     if provider == "github":
-        auth_url = oauth_service.get_github_auth_url(state, redirect_uri)
+        auth_url = oauth_service.get_github_auth_url(state_data, redirect_uri)
     else:  # google
-        auth_url = oauth_service.get_google_auth_url(state, redirect_uri)
+        auth_url = oauth_service.get_google_auth_url(state_data, redirect_uri)
 
-    return {"auth_url": auth_url, "state": state}
+    return {"auth_url": auth_url, "state": state_data}
+
+@router.get("/callback")
+async def generic_auth_callback(
+    code: str,
+    state: str,
+    db: Session = Depends(get_db)
+):
+    """Handle OAuth callback from any provider (extracts provider from state)."""
+    print(f"DEBUG: Raw state: {state}")
+    # URL-decode the state parameter first
+    decoded_state = unquote(state)
+    print(f"DEBUG: Decoded state: {decoded_state}")
+
+    # Extract state, redirect_uri, and provider from state (format: "state:redirect_uri:provider")
+    try:
+        # Split on the last colon to get provider, then split the rest on first colon
+        if ":" not in decoded_state:
+            raise ValueError("Invalid state format")
+        
+        # Find the last colon (separates provider)
+        last_colon_idx = decoded_state.rfind(":")
+        if last_colon_idx == -1:
+            raise ValueError("Invalid state format")
+            
+        provider = decoded_state[last_colon_idx + 1:]
+        state_and_url = decoded_state[:last_colon_idx]
+        
+        # Now split state_and_url on the first colon
+        first_colon_idx = state_and_url.find(":")
+        if first_colon_idx == -1:
+            raise ValueError("Invalid state format")
+            
+        state_part = state_and_url[:first_colon_idx]
+        redirect_uri = state_and_url[first_colon_idx + 1:]
+        
+        print(f"DEBUG: Parsed - state_part: {state_part}, redirect_uri: {redirect_uri}, provider: {provider}")
+        
+    except ValueError:
+        # Fallback for old state format
+        raise HTTPException(status_code=400, detail="Invalid state format")
+
+    print(f"DEBUG: Provider: {provider}")
+    if provider not in ["github", "google"]:
+        print(f"DEBUG: Unsupported provider: {provider}")
+        raise HTTPException(status_code=400, detail="Unsupported provider")
+
+    # Exchange code for user data
+    if provider == "github":
+        oauth_data = await oauth_service.exchange_github_code(code)
+    else:
+        oauth_data = await oauth_service.exchange_google_code(code, redirect_uri)
+
+    if not oauth_data:
+        # Redirect to frontend with error
+        from ..config import settings
+        error_redirect = f"{settings.frontend_url}/?error=oauth_failed"
+        return RedirectResponse(url=error_redirect)
+
+    # Create or update user based on OAuth data
+    user = auth_service.create_or_update_user(db, oauth_data)
+
+    # Generate JWT tokens for the authenticated user
+    tokens = auth_service.create_tokens(db, user)
+
+    # Redirect to frontend with tokens as URL fragments
+    from ..config import settings
+    success_redirect = (
+        f"{settings.frontend_url}/"
+        f"?access_token={quote(tokens['access_token'])}"
+        f"&refresh_token={quote(tokens['refresh_token'])}"
+        f"&token_type={quote(tokens['token_type'])}"
+        f"&expires_in={tokens['expires_in']}"
+    )
+    return RedirectResponse(url=success_redirect)
 
 @router.get("/callback/{provider}")
 async def auth_callback(
@@ -91,14 +169,23 @@ async def auth_callback(
     if provider not in ["github", "google"]:
         raise HTTPException(status_code=400, detail="Unsupported provider")
 
+    # Extract redirect_uri from state (format: "state:redirect_uri")
+    try:
+        state_part, redirect_uri = state.split(":", 1)
+    except ValueError:
+        # Fallback for old state format without redirect_uri
+        redirect_uri = f"{settings.frontend_url}/auth/callback"
+        state_part = state
+
     # Exchange code for user data
     if provider == "github":
         oauth_data = await oauth_service.exchange_github_code(code)
     else:
-        oauth_data = await oauth_service.exchange_google_code(code)
+        oauth_data = await oauth_service.exchange_google_code(code, redirect_uri)
 
     if not oauth_data:
         # Redirect to frontend with error
+        from ..config import settings
         error_redirect = f"{settings.frontend_url}/?error=oauth_failed"
         return RedirectResponse(url=error_redirect)
 
@@ -109,11 +196,12 @@ async def auth_callback(
     tokens = auth_service.create_tokens(db, user)
 
     # Redirect to frontend with tokens as URL fragments
+    from ..config import settings
     success_redirect = (
         f"{settings.frontend_url}/"
-        f"?access_token={tokens['access_token']}"
-        f"&refresh_token={tokens['refresh_token']}"
-        f"&token_type={tokens['token_type']}"
+        f"?access_token={quote(tokens['access_token'])}"
+        f"&refresh_token={quote(tokens['refresh_token'])}"
+        f"&token_type={quote(tokens['token_type'])}"
         f"&expires_in={tokens['expires_in']}"
     )
     return RedirectResponse(url=success_redirect)
@@ -124,15 +212,15 @@ async def backup_login(request: BackupLoginRequest, db: Session = Depends(get_db
     import os
     import hashlib
     import json
-    
+
     # Get backup credentials from environment variables for security
     backup_users_json = os.getenv("BACKUP_USERS", "")
-    
+
     # Fallback to single user format for backward compatibility
     if not backup_users_json:
         backup_username = os.getenv("BACKUP_ADMIN_USERNAME", "")
         backup_password_hash = os.getenv("BACKUP_ADMIN_PASSWORD_HASH", "")
-        
+
         if backup_username and backup_password_hash:
             backup_users = {
                 backup_username: {
@@ -151,14 +239,14 @@ async def backup_login(request: BackupLoginRequest, db: Session = Depends(get_db
                 status_code=500,
                 detail="Invalid BACKUP_USERS configuration"
             )
-    
+
     # If no backup credentials are configured, disable this endpoint
     if not backup_users:
         raise HTTPException(
             status_code=503,
             detail="Backup login not configured. Please contact an administrator."
         )
-    
+
     # Check if username exists in backup users
     if request.username not in backup_users:
         # Log failed attempt for security monitoring
@@ -166,12 +254,12 @@ async def backup_login(request: BackupLoginRequest, db: Session = Depends(get_db
         logger = logging.getLogger(__name__)
         logger.warning(f"Failed backup login attempt for unknown username: {request.username}")
         raise HTTPException(status_code=401, detail="Invalid backup credentials")
-    
+
     user_config = backup_users[request.username]
-    
+
     # Hash the provided password to compare with stored hash
     provided_password_hash = hashlib.sha256(request.password.encode()).hexdigest()
-    
+
     # Secure comparison to prevent timing attacks
     import hmac
     if not hmac.compare_digest(provided_password_hash, user_config["password_hash"]):
@@ -179,9 +267,9 @@ async def backup_login(request: BackupLoginRequest, db: Session = Depends(get_db
         import logging
         logger = logging.getLogger(__name__)
         logger.warning(f"Failed backup login attempt for username: {request.username}")
-        
+
         raise HTTPException(status_code=401, detail="Invalid backup credentials")
-    
+
     # Create or get backup user, using configured profile values
     from ..models.user import User
     backup_username = f"backup_{request.username}"

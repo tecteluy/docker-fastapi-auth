@@ -2,6 +2,7 @@ import httpx
 from typing import Optional, Dict, Any
 import logging
 from ..config import settings
+from urllib.parse import quote
 
 # Use the OAuth-specific logger
 logger = logging.getLogger("fastapi.oauth")
@@ -29,7 +30,7 @@ class OAuthService:
         return (
             f"https://accounts.google.com/o/oauth2/auth"
             f"?client_id={self.google_client_id}"
-            f"&redirect_uri={redirect_uri}"
+            f"&redirect_uri={quote(redirect_uri, safe=':/')}"
             f"&scope=openid email profile"
             f"&response_type=code"
             f"&state={state}"
@@ -91,11 +92,9 @@ class OAuthService:
             logger.error(f"GitHub OAuth error: {e}")
             return None
 
-    async def exchange_google_code(self, code: str) -> Optional[Dict[str, Any]]:
+    async def exchange_google_code(self, code: str, redirect_uri: str) -> Optional[Dict[str, Any]]:
         """Exchange Google authorization code for access token and user data."""
         try:
-            redirect_uri = f"{self.frontend_url}/auth/callback"
-
             async with httpx.AsyncClient() as client:
                 # Exchange code for access token
                 token_response = await client.post(
