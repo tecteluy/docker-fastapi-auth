@@ -14,6 +14,8 @@ services:
       - auth_postgres_data:/var/lib/postgresql/data
     networks:
       - auth-network
+    ports:
+      - "127.0.0.1:5433:5432"  # Use different port to avoid conflicts
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-atrium_auth}"]
@@ -30,6 +32,8 @@ services:
       - auth_redis_data:/data
     networks:
       - auth-network
+    ports:
+      - "127.0.0.1:6380:6379"  # Use different port to avoid conflicts
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -45,14 +49,14 @@ services:
     container_name: fastapi-auth-service
     environment:
       # Database Configuration
-      - POSTGRES_HOST=auth-db
+      - POSTGRES_HOST=localhost
       - POSTGRES_USER=${POSTGRES_USER:-postgres}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-changeme}
       - POSTGRES_DB=${POSTGRES_DB:-atrium_auth}
-      - POSTGRES_PORT=5432
+      - POSTGRES_PORT=5433
       
       # Redis Configuration
-      - REDIS_URL=redis://:${REDIS_PASSWORD:-}@auth-redis:6379/0
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-}@localhost:6380/0
       
       # OAuth Configuration
       - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID:-}
@@ -87,13 +91,10 @@ services:
         condition: service_healthy
       auth-redis:
         condition: service_healthy
-    ports:
-      - "8008:8000"
-    networks:
-      - auth-network
+    network_mode: host
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8008/health"]
       interval: 30s
       timeout: 10s
       retries: 5
