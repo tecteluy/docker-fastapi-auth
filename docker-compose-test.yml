@@ -70,7 +70,6 @@ services:
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
       - BACKEND_URL=${BACKEND_URL:-http://localhost:8008}
       - BASE_URL=${BASE_URL:-https://devel.tectel.uy/auth}
-      - ROOT_PATH=${ROOT_PATH:-/auth}
       
       # API Configuration
       - API_TOKEN=${API_TOKEN:-changeme}
@@ -98,6 +97,87 @@ services:
       timeout: 10s
       retries: 5
       start_period: 30s
+
+  # Test Database
+  test-db:
+    image: postgres:15
+    container_name: fastapi-auth-test-db
+    environment:
+      POSTGRES_USER: test_user
+      POSTGRES_PASSWORD: test_password
+      POSTGRES_DB: test_db
+    volumes:
+      - test_postgres_data:/var/lib/postgresql/data
+    networks:
+      - auth-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test_user -d test_db"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Test Redis
+  test-redis:
+    image: redis:7-alpine
+    container_name: fastapi-auth-test-redis
+    command: redis-server --appendonly yes
+    volumes:
+      - test_redis_data:/data
+    networks:
+      - auth-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Test Runner
+  test-runner:
+    build: 
+      context: ./auth-service
+      dockerfile: Dockerfile
+    container_name: fastapi-auth-test-runner
+    environment:
+      # Test Database Configuration
+      - POSTGRES_HOST=test-db
+      - POSTGRES_USER=test_user
+      - POSTGRES_PASSWORD=test_password
+      - POSTGRES_DB=test_db
+      - POSTGRES_PORT=5432
+      
+      # Test Redis Configuration (no password for tests)
+      - REDIS_URL=redis://test-redis:6379/0
+      
+      # Test JWT Configuration
+      - JWT_SECRET_KEY=test-secret-key-for-testing-only-change-in-production
+      - JWT_ALGORITHM=HS256
+      - JWT_ACCESS_TOKEN_EXPIRE_MINUTES=30
+      - JWT_REFRESH_TOKEN_EXPIRE_DAYS=7
+      
+      # Test Application URLs
+      - FRONTEND_URL=http://localhost:3000
+      - BACKEND_URL=http://localhost:8006
+      
+      # Test Environment
+      - ENVIRONMENT=testing
+      
+      # Python Path
+      - PYTHONPATH=/app:/app/auth-service
+    volumes:
+      - ./:/app
+      - /app/__pycache__  # Exclude cache from volume
+    working_dir: /app
+    depends_on:
+      test-db:
+        condition: service_healthy
+      test-redis:
+        condition: service_healthy
+    networks:
+      - auth-network
+    command: pytest tests/ -v --tb=short --cov=app --cov-report=term-missing
+    profiles: ["test"]
 
 volumes:
   auth_postgres_data:

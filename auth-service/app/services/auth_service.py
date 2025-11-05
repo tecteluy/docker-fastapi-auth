@@ -10,6 +10,26 @@ class AuthService:
         self.token_service = TokenService()
         self.oauth_service = OAuthService()
 
+    def get_existing_user(self, db: Session, oauth_data: dict) -> Optional[User]:
+        """Get existing user by OAuth data without creating new ones."""
+        user = db.query(User).filter(
+            User.provider == oauth_data["provider"],
+            User.provider_id == oauth_data["provider_id"]
+        ).first()
+        
+        if user:
+            # Update existing user's login info
+            user.email = oauth_data["email"]
+            user.full_name = oauth_data["full_name"]
+            user.avatar_url = oauth_data["avatar_url"]
+            user.provider_data = oauth_data["provider_data"]
+            user.last_login = datetime.utcnow()
+            user.updated_at = datetime.utcnow()
+            db.commit()
+            db.refresh(user)
+        
+        return user
+
     def create_or_update_user(self, db: Session, oauth_data: dict) -> User:
         """Create new user or update existing user from OAuth data."""
         user = db.query(User).filter(

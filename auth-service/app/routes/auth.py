@@ -5,7 +5,7 @@ from ..database import get_db
 from ..services.auth_service import AuthService
 from ..services.oauth_service import OAuthService
 from ..services.token_service import TokenService
-from ..middleware.auth_middleware import get_current_user
+from ..middleware.auth_middleware import get_current_user, verify_api_token
 from ..config import settings
 from pydantic import BaseModel, field_validator
 from urllib.parse import quote, unquote
@@ -63,18 +63,33 @@ async def login(provider: str, request: Request):
     if provider not in ["github", "google"]:
         raise HTTPException(status_code=400, detail="Unsupported provider")
 
-    # Get redirect_uri from query parameters (sent by Angular app)
+    # Debug: Log all query parameters
+    logger = logging.getLogger(__name__)
+    logger.info(f"All query params: {dict(request.query_params)}")
+
+    # Get redirect_uri from query parameters (sent by client app)
     redirect_uri = request.query_params.get("redirect_uri")
     if not redirect_uri:
-        # Fallback to configured frontend URL if no redirect_uri provided
-        redirect_uri = f"{settings.frontend_url}/auth/callback"
+        # Use the provider-specific callback endpoint through the configured base URL
+        redirect_uri = f"{settings.base_url}/callback/{provider}"
+    
+    # Get client_redirect_uri - where to redirect after successful auth
+    client_redirect_uri = request.query_params.get("client_redirect_uri")
+    logger.info(f"client_redirect_uri from query: '{client_redirect_uri}'")
+    if not client_redirect_uri:
+        # Default to signin page if not specified
+        client_redirect_uri = f"{settings.frontend_url}/signin?success=true"
+        logger.info(f"Using default client_redirect_uri: {client_redirect_uri}")
+    else:
+        logger.info(f"Using provided client_redirect_uri: {client_redirect_uri}")
 
     # Generate state for CSRF protection
     state = secrets.token_urlsafe(32)
 
-    # Store redirect_uri and provider in state for later retrieval (you might want to use Redis for production)
-    # For now, we'll embed it in the state parameter
-    state_data = f"{state}:{redirect_uri}:{provider}"
+    # Store redirect_uri, client_redirect_uri and provider in state for later retrieval
+    # Format: "state|oauth_redirect_uri|client_redirect_uri|provider" (using | separator to avoid URL colon conflicts)
+    state_data = f"{state}|{redirect_uri}|{client_redirect_uri}|{provider}"
+    logger.info(f"Generated state_data: {state_data}")
 
     # Store state in session (you might want to use Redis for production)
     if provider == "github":
@@ -84,79 +99,7 @@ async def login(provider: str, request: Request):
 
     return {"auth_url": auth_url, "state": state_data}
 
-@router.get("/callback")
-async def generic_auth_callback(
-    code: str,
-    state: str,
-    db: Session = Depends(get_db)
-):
-    """Handle OAuth callback from any provider (extracts provider from state)."""
-    print(f"DEBUG: Raw state: {state}")
-    # URL-decode the state parameter first
-    decoded_state = unquote(state)
-    print(f"DEBUG: Decoded state: {decoded_state}")
 
-    # Extract state, redirect_uri, and provider from state (format: "state:redirect_uri:provider")
-    try:
-        # Split on the last colon to get provider, then split the rest on first colon
-        if ":" not in decoded_state:
-            raise ValueError("Invalid state format")
-        
-        # Find the last colon (separates provider)
-        last_colon_idx = decoded_state.rfind(":")
-        if last_colon_idx == -1:
-            raise ValueError("Invalid state format")
-            
-        provider = decoded_state[last_colon_idx + 1:]
-        state_and_url = decoded_state[:last_colon_idx]
-        
-        # Now split state_and_url on the first colon
-        first_colon_idx = state_and_url.find(":")
-        if first_colon_idx == -1:
-            raise ValueError("Invalid state format")
-            
-        state_part = state_and_url[:first_colon_idx]
-        redirect_uri = state_and_url[first_colon_idx + 1:]
-        
-        print(f"DEBUG: Parsed - state_part: {state_part}, redirect_uri: {redirect_uri}, provider: {provider}")
-        
-    except ValueError:
-        # Fallback for old state format
-        raise HTTPException(status_code=400, detail="Invalid state format")
-
-    print(f"DEBUG: Provider: {provider}")
-    if provider not in ["github", "google"]:
-        print(f"DEBUG: Unsupported provider: {provider}")
-        raise HTTPException(status_code=400, detail="Unsupported provider")
-
-    # Exchange code for user data
-    if provider == "github":
-        oauth_data = await oauth_service.exchange_github_code(code)
-    else:
-        oauth_data = await oauth_service.exchange_google_code(code, redirect_uri)
-
-    if not oauth_data:
-        # Redirect to frontend with error
-        from ..config import settings
-        error_redirect = f"{settings.frontend_url}/?error=oauth_failed"
-        return RedirectResponse(url=error_redirect)
-
-    # Create or update user based on OAuth data
-    user = auth_service.create_or_update_user(db, oauth_data)
-
-    # Generate JWT tokens for the authenticated user
-    tokens = auth_service.create_tokens(db, user)
-
-    # Redirect to frontend with tokens as URL fragments
-    from ..config import settings
-    success_redirect = (
-        f"{settings.frontend_url}/"
-        f"?access_token={quote(tokens['access_token'])}"
-        f"&refresh_token={quote(tokens['refresh_token'])}"
-        f"&token_type={quote(tokens['token_type'])}"
-        f"&expires_in={tokens['expires_in']}"
-    )
-    return RedirectResponse(url=success_redirect)
 
 @router.get("/callback/{provider}")
 async def auth_callback(
@@ -165,18 +108,62 @@ async def auth_callback(
     state: str,
     db: Session = Depends(get_db)
 ):
-    """Handle OAuth callback."""
+    """Handle OAuth callback for specific provider."""
+    logger = logging.getLogger(__name__)
+    logger.info(f"OAuth callback received - Provider: {provider}, Code: {code[:10]}..., State: {state}")
+    
     if provider not in ["github", "google"]:
         raise HTTPException(status_code=400, detail="Unsupported provider")
 
-    # Extract redirect_uri from state (format: "state:redirect_uri")
+    # Extract redirect_uri and client_redirect_uri from state 
+    # Handle both pipe format "state|redirect_uri|client_redirect_uri|provider" and old colon format
     try:
-        state_part, redirect_uri = state.split(":", 1)
-    except ValueError:
-        # Fallback for old state format without redirect_uri
-        from ..config import settings
-        redirect_uri = f"{settings.frontend_url}/auth/callback"
-        state_part = state
+        # URL-decode the state parameter first
+        decoded_state = unquote(state)
+        
+        # Parse state based on format - check for pipe separator first (new format)
+        if "|" in decoded_state:
+            # New pipe format: state|redirect_uri|client_redirect_uri|provider
+            state_parts = decoded_state.split("|")
+            if len(state_parts) >= 4:
+                state_part = state_parts[0]
+                redirect_uri = state_parts[1] 
+                client_redirect_uri = state_parts[2]
+                state_provider = state_parts[3]
+            else:
+                # Fallback for malformed pipe format
+                redirect_uri = f"{settings.base_url}/callback/{provider}"
+                client_redirect_uri = f"{settings.frontend_url}/signin?success=true"
+                state_provider = provider
+        elif decoded_state.count(":") >= 2:
+            # Old colon format: state:redirect_uri:provider or state:redirect_uri:client_redirect_uri:provider
+            state_parts = decoded_state.split(":")
+            state_part = state_parts[0]
+            
+            # Check if this has client_redirect_uri (4+ parts) vs old format (3 parts)
+            if len(state_parts) >= 4:
+                # New format: state:redirect_uri:client_redirect_uri:provider (but URLs have colons too)
+                # Need to handle URLs with colons properly
+                redirect_uri = ":".join(state_parts[1:-2])  # Middle parts form the redirect_uri
+                client_redirect_uri = state_parts[-2]  # Second to last is client_redirect_uri
+                state_provider = state_parts[-1]  # Last part is provider
+            else:
+                # Old format: state:redirect_uri:provider
+                redirect_uri = ":".join(state_parts[1:-1])  # Everything except first and last
+                state_provider = state_parts[-1]  # Last part is provider
+                client_redirect_uri = f"{settings.frontend_url}/signin?success=true"  # Default
+        else:
+            # Fallback
+            redirect_uri = f"{settings.base_url}/callback/{provider}"
+            client_redirect_uri = f"{settings.frontend_url}/signin?success=true"
+            state_provider = provider
+            
+    except (ValueError, IndexError):
+        # Fallback for malformed state
+        redirect_uri = f"{settings.base_url}/callback/{provider}"
+        client_redirect_uri = f"{settings.frontend_url}/signin?success=true"
+
+    logger.info(f"Parsed state - redirect_uri: {redirect_uri}, client_redirect_uri: {client_redirect_uri}")
 
     # Exchange code for user data
     if provider == "github":
@@ -185,27 +172,54 @@ async def auth_callback(
         oauth_data = await oauth_service.exchange_google_code(code, redirect_uri)
 
     if not oauth_data:
-        # Redirect to frontend with error
-        from ..config import settings
-        error_redirect = f"{settings.frontend_url}/?error=oauth_failed"
+        logger.error(f"OAuth exchange failed for provider {provider} with redirect_uri: {redirect_uri}")
+        # Redirect to client app with error - remove any existing success param and add error
+        from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
+        parsed_url = urlparse(client_redirect_uri)
+        query_params = parse_qs(parsed_url.query)
+        
+        # Remove success parameter if it exists and add error parameter
+        query_params.pop('success', None)
+        query_params['error'] = ['oauth_failed']
+        
+        # Rebuild the URL
+        new_query = urlencode(query_params, doseq=True)
+        error_redirect = urlunparse((
+            parsed_url.scheme, parsed_url.netloc, parsed_url.path,
+            parsed_url.params, new_query, parsed_url.fragment
+        ))
+        logger.info(f"Redirecting to error page: {error_redirect}")
         return RedirectResponse(url=error_redirect)
 
-    # Create or update user based on OAuth data
-    user = auth_service.create_or_update_user(db, oauth_data)
+    # Check if user exists (don't auto-create new users)
+    user = auth_service.get_existing_user(db, oauth_data)
+    
+    if not user:
+        # User is not registered - redirect with NotRegistered error
+        logger.info(f"User not registered: {oauth_data.get('email', 'Unknown')} from {provider}")
+        from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
+        parsed_url = urlparse(client_redirect_uri)
+        query_params = parse_qs(parsed_url.query)
+        
+        # Remove success parameter if it exists and add error parameter
+        query_params.pop('success', None)
+        query_params['error'] = ['NotRegistered']
+        query_params['name'] = [oauth_data.get('full_name', oauth_data.get('username', 'User'))]
+        
+        # Rebuild the URL
+        new_query = urlencode(query_params, doseq=True)
+        error_redirect = urlunparse((
+            parsed_url.scheme, parsed_url.netloc, parsed_url.path,
+            parsed_url.params, new_query, parsed_url.fragment
+        ))
+        logger.info(f"Redirecting to not registered error: {error_redirect}")
+        return RedirectResponse(url=error_redirect)
 
     # Generate JWT tokens for the authenticated user
     tokens = auth_service.create_tokens(db, user)
 
-    # Redirect to frontend with tokens as URL fragments
-    from ..config import settings
-    success_redirect = (
-        f"{settings.frontend_url}/"
-        f"?access_token={quote(tokens['access_token'])}"
-        f"&refresh_token={quote(tokens['refresh_token'])}"
-        f"&token_type={quote(tokens['token_type'])}"
-        f"&expires_in={tokens['expires_in']}"
-    )
-    return RedirectResponse(url=success_redirect)
+    # Use the client_redirect_uri from state
+    return RedirectResponse(url=client_redirect_uri)
 
 @router.post("/backup-login")
 async def backup_login(request: BackupLoginRequest, db: Session = Depends(get_db)):
@@ -354,12 +368,139 @@ async def refresh_token(
     return result
 
 @router.post("/logout")
-async def logout(
-    request: RefreshTokenRequest = Body(...),
-    db: Session = Depends(get_db)
+async def logout(current_user: dict = Depends(get_current_user)):
+    """Logout user (client should remove tokens)."""
+    # In a more advanced implementation, you might want to blacklist the refresh token
+    return {"message": "Logged out successfully"}
+
+class PreRegisterUserRequest(BaseModel):
+    email: str
+    provider: str  # 'github' or 'google'
+    provider_id: str
+    username: str
+    full_name: str | None = None
+
+@router.post("/admin/pre-register")
+async def pre_register_user(
+    request: PreRegisterUserRequest, 
+    db: Session = Depends(get_db),
+    api_token_valid: bool = Depends(verify_api_token)  # Require valid API token
 ):
-    """Logout user and revoke refresh token."""
-    success = auth_service.revoke_refresh_token(db, request.refresh_token)
-    if not success:
-        raise HTTPException(status_code=401, detail="Invalid refresh token")
-    return {"message": "Successfully logged out"}
+    """Pre-register a user so they can sign in via OAuth. 
+    
+    Requires:
+    - Valid API token in Authorization header (Bearer <API_TOKEN>)
+    
+    This endpoint is restricted to authorized administrators only.
+    """
+    from ..models.user import User
+    
+    # Check if user already exists
+    existing_user = db.query(User).filter(
+        User.provider == request.provider,
+        User.provider_id == request.provider_id
+    ).first()
+    
+    if existing_user:
+        return {"message": f"User {request.email} is already registered"}
+    
+    # Create pre-registered user
+    user = User(
+        email=request.email,
+        username=request.username,
+        full_name=request.full_name,
+        provider=request.provider,
+        provider_id=request.provider_id,
+        provider_data={},
+        is_active=True,
+        is_admin=False,
+        permissions={"services": []}
+    )
+    db.add(user)
+    db.commit()
+    
+    return {"message": f"User {request.email} pre-registered successfully"}
+
+@router.get("/admin/users")
+async def list_users(
+    db: Session = Depends(get_db),
+    api_token_valid: bool = Depends(verify_api_token)
+):
+    """List all registered users. Requires API token authentication."""
+    from ..models.user import User
+    
+    users = db.query(User).all()
+    
+    return {
+        "users": [
+            {
+                "id": user.id,
+                "email": user.email,
+                "username": user.username,
+                "full_name": user.full_name,
+                "provider": user.provider,
+                "provider_id": user.provider_id,
+                "is_active": user.is_active,
+                "is_admin": user.is_admin,
+                "created_at": user.created_at,
+                "last_login": user.last_login
+            }
+            for user in users
+        ]
+    }
+
+@router.delete("/admin/users/{user_id}")
+async def remove_user(
+    user_id: int,
+    db: Session = Depends(get_db),
+    api_token_valid: bool = Depends(verify_api_token)
+):
+    """Remove a user by ID. Requires API token authentication."""
+    from ..models.user import User
+    
+    user = db.query(User).filter(User.id == user_id).first()
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Store user info for response
+    user_info = {
+        "id": user.id,
+        "email": user.email,
+        "username": user.username,
+        "provider": user.provider
+    }
+    
+    # Delete the user
+    db.delete(user)
+    db.commit()
+    
+    return {"message": f"User {user_info['email']} removed successfully", "user": user_info}
+
+@router.get("/admin/users/{user_id}")
+async def get_user(
+    user_id: int,
+    db: Session = Depends(get_db),
+    api_token_valid: bool = Depends(verify_api_token)
+):
+    """Get a specific user by ID. Requires API token authentication."""
+    from ..models.user import User
+    
+    user = db.query(User).filter(User.id == user_id).first()
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    return {
+        "id": user.id,
+        "email": user.email,
+        "username": user.username,
+        "full_name": user.full_name,
+        "provider": user.provider,
+        "provider_id": user.provider_id,
+        "is_active": user.is_active,
+        "is_admin": user.is_admin,
+        "created_at": user.created_at,
+        "last_login": user.last_login,
+        "permissions": user.permissions
+    }

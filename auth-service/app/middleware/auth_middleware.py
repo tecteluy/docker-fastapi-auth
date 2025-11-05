@@ -47,3 +47,22 @@ async def require_admin(current_user: User = Depends(get_current_user)) -> User:
             detail="Admin privileges required"
         )
     return current_user
+
+async def verify_api_token(
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+) -> bool:
+    """Verify API token for admin operations."""
+    from ..config import settings
+    import os
+    
+    api_token = os.getenv("API_TOKEN", settings.api_token)
+    provided_token = credentials.credentials
+    
+    if provided_token != api_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid API token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    return True

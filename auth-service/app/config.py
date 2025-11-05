@@ -29,11 +29,16 @@ class Settings(BaseSettings):
     redis_port: int = 6379
 
     # Application URLs
-    frontend_url: str = "http://localhost:3000"
-    backend_url: str = "http://localhost:8006"
+    frontend_url: str = "https://www.tectel.com.uy"
+    backend_url: str = "http://localhost:8008"
+    base_url: str = "http://localhost:8008"  # Public base URL for the auth service (override with BASE_URL env var)
+    root_path: str = ""  # Root path for reverse proxy (e.g., "/auth" for https://domain.com/auth/)
 
     # Service Configuration
     auth_service_port: int = 8008
+    
+    # Tectel website specific configuration
+    website_url: str = "https://www.tectel.com.uy"
 
     # API Configuration
     api_token: str = "changeme"

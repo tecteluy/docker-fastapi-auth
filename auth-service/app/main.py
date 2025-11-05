@@ -31,7 +31,8 @@ app = FastAPI(
     title="FastAPI Authentication Service",
     description="OAuth 2.0 / OpenID Connect authentication service for FastAPI",
     version="1.1.2",
-    lifespan=lifespan
+    lifespan=lifespan,
+    root_path=settings.root_path
 )
 
 # Add request logging middleware
@@ -43,7 +44,13 @@ app.add_middleware(
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.frontend_url],
+    allow_origins=[
+        settings.frontend_url,
+        settings.website_url,
+        "http://localhost:3000",  # Development
+        "http://localhost:8443",  # Production port 1
+        "http://localhost:9443"   # Production port 2
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

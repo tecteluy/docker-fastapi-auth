@@ -94,6 +94,7 @@ class OAuthService:
 
     async def exchange_google_code(self, code: str, redirect_uri: str) -> Optional[Dict[str, Any]]:
         """Exchange Google authorization code for access token and user data."""
+        logger.info(f"Exchanging Google code with redirect_uri: {redirect_uri}")
         try:
             async with httpx.AsyncClient() as client:
                 # Exchange code for access token
@@ -108,8 +109,10 @@ class OAuthService:
                     }
                 )
                 token_data = token_response.json()
+                logger.info(f"Google token response status: {token_response.status_code}")
 
                 if "access_token" not in token_data:
+                    logger.error(f"Google token exchange failed - Response: {token_data}")
                     return None
 
                 # Get user data
