@@ -12,12 +12,15 @@ pipeline {
         }
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t $IMAGE .'
+                sh 'docker build -t $IMAGE -f auth-service/Dockerfile auth-service'
             }
         }
         stage('Push Image') {
             steps {
-                sh 'docker push $IMAGE'
+                withCredentials([usernamePassword(credentialsId: 'docker-registry-cred', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    sh 'docker login docker.tectel.com.uy -u $DOCKER_USER -p $DOCKER_PASS'
+                    sh 'docker push $IMAGE'
+                }
             }
         }
         stage('Deploy to Kubernetes') {
