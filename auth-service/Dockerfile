@@ -10,6 +10,12 @@ RUN apt-get update && apt-get install -y \
 
 # Install Python dependencies
 COPY requirements.txt .
+
+RUN apt-get update && apt-get install -y iputils-ping curl
+RUN ping -c 4 pypi.org
+RUN curl -I https://pypi.org
+RUN cat /etc/resolv.conf
+
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application
