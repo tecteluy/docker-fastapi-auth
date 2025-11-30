@@ -7,7 +7,7 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git url: 'https://github.com/tecteluy/docker-fastapi-auth.git'
+                git url: 'https://github.com/tecteluy/docker-fastapi-auth.git', branch: 'main'
             }
         }
         stage('Build Docker Image') {
