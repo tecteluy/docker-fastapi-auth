@@ -26,3 +26,16 @@ spec:
           - |
             echo 'hola 1!' > /usr/share/nginx/html/index.html && \
             nginx -g 'daemon off;'
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: servicio-app1
+  namespace: develop
+spec:
+  selector:
+    app: app1
+  ports:
+    - port: 8080
+      targetPort: 80
+  type: ClusterIP
